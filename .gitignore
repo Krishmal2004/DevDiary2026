@@ -1,1 +1,20 @@
 devdiary2026.2026-09-18.private-key.pem
+*.pem
+
+# dependencies
+node_modules/
+
+# env
+.env
+.env.local
+
+# backend
+backend/data/
+backend/keys/*
+!backend/keys/.gitkeep
+
+# frontend
+frontend/dist/
+
+# editor/OS
+.DS_Store
