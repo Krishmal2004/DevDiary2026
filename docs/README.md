@@ -6,3 +6,4 @@ Detailed documentation for DevDiary2026. Start with the project [README](../READ
 - [GitHub App](./github-app.md) — GitHub App configuration and permissions
 - [Setup](./setup.md) — local development setup and environment variables
 - [Roadmap](./roadmap.md) — build order and project status
+- [Native Workflow Guide](./native-workflow-guide.md) — DIY version of this workflow using only native GitHub features (repo, Projects v2, Actions, Gists), written for the GitHub Community discussion
