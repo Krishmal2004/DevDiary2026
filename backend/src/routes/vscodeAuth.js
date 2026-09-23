@@ -33,6 +33,27 @@ function isAllowedRedirect(value) {
   }
 }
 
+// VS Code's asExternalUri adds `?windowId=N` to the callback, and
+// openExternal encodes the start URL again, so the callback can arrive
+// percent-encoded one or two extra times ("…/auth%3FwindowId=1"). Decode
+// until it's an allowed URI; the check runs on the decoded value, so this
+// never lets anything else through. Returns the usable URI, or null.
+function normalizeRedirect(value) {
+  let candidate = value;
+  for (let i = 0; i < 3; i++) {
+    if (isAllowedRedirect(candidate)) return candidate;
+    let decoded;
+    try {
+      decoded = decodeURIComponent(candidate);
+    } catch {
+      return null;
+    }
+    if (decoded === candidate) return null;
+    candidate = decoded;
+  }
+  return null;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -142,7 +163,8 @@ router.get("/start", (req, res) => {
   if (code_challenge_method !== "S256") {
     return errorPage(res, 400, "Only the S256 code challenge method is supported.");
   }
-  if (redirect_uri !== undefined && !isAllowedRedirect(redirect_uri)) {
+  const redirectUri = typeof redirect_uri === "string" ? normalizeRedirect(redirect_uri) : null;
+  if (redirect_uri !== undefined && !redirectUri) {
     return errorPage(res, 400, "This sign-in request came from an app that isn't the DevDiary extension.");
   }
 
@@ -152,7 +174,7 @@ router.get("/start", (req, res) => {
   req.session.vscodeRequest = {
     state,
     codeChallenge: code_challenge,
-    redirectUri: redirect_uri || null,
+    redirectUri,
     clientName,
     nonce: crypto.randomBytes(16).toString("hex"),
     expiresAt: Date.now() + REQUEST_TTL_MS,
