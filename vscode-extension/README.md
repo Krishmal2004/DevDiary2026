@@ -12,10 +12,10 @@ Your [DevDiary2026](https://github.com/Krishmal2004/DevDiary2026) work log insid
 
 ## Getting started
 
-1. You need a DevDiary2026 server: a public instance or your own ([setup guide](https://github.com/Krishmal2004/DevDiary2026/blob/main/docs/setup.md)).
-2. Set **DevDiary: Server Url** (`devdiary.serverUrl`) to its address. The default is `http://localhost:4000` for local development.
-3. Open the **DevDiary** view in the activity bar and choose **Sign in with GitHub**.
-4. Your browser opens. Sign in with GitHub if asked, then choose **Allow**. The browser hands you back to VS Code and you're signed in.
+1. Open the **DevDiary** view in the activity bar and choose **Sign in with GitHub**.
+2. Your browser opens. Sign in with GitHub if asked, then choose **Allow**. The browser hands you back to VS Code and you're signed in.
+
+The extension uses the public DevDiary server by default, so there's nothing to set up. If you run your own server ([setup guide](https://github.com/Krishmal2004/DevDiary2026/blob/main/docs/setup.md)), set **DevDiary: Server Url** (`devdiary.serverUrl`) to its address.
 
 If your browser can't open VS Code (for example in a browser-based editor), the page shows a one-time code. Run **DevDiary: Paste Sign-In Code** and paste it.
 
@@ -38,7 +38,7 @@ Due dates can be *No due date*, *Today*, *Tomorrow*, *Next Monday*, *In a week*,
 
 | Setting | Default | Description |
 |---|---|---|
-| `devdiary.serverUrl` | `http://localhost:4000` | DevDiary backend to use. Each server keeps its own sign-in. |
+| `devdiary.serverUrl` | the public DevDiary server | DevDiary backend to use: `http://localhost:4000` for local development, or your own URL. Each server keeps its own sign-in. |
 | `devdiary.refreshInterval` | `5` | Minutes between background refreshes |
 | `devdiary.notifications.dueTodos` | `true` | Notify when a todo becomes due |
 | `devdiary.statusBar.enabled` | `true` | Show the due-todo count in the status bar |

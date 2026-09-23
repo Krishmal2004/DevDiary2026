@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Uses the public DevDiary server (https://devdiary-czdtetawaufxere0.southeastasia-01.azurewebsites.net) by default, so the extension works right after installing. Set `devdiary.serverUrl` to use your own server.
+
 ## 0.1.0
 
 First release.

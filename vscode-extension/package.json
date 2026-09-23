@@ -2,7 +2,7 @@
   "name": "devdiary2026",
   "displayName": "DevDiary",
   "description": "Your DevDiary2026 diary, todos and today's GitHub activity, inside VS Code.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "krishmal2004",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -373,8 +373,8 @@
       "properties": {
         "devdiary.serverUrl": {
           "type": "string",
-          "default": "http://localhost:4000",
-          "markdownDescription": "URL of the DevDiary2026 backend, e.g. `https://devdiary.example.com`. Each server keeps its own sign-in."
+          "default": "https://devdiary-czdtetawaufxere0.southeastasia-01.azurewebsites.net",
+          "markdownDescription": "URL of the DevDiary2026 backend. The default is the public DevDiary server; set `http://localhost:4000` for local development or your own URL if you self-host. Each server keeps its own sign-in."
         },
         "devdiary.refreshInterval": {
           "type": "number",

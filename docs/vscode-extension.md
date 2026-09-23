@@ -326,7 +326,7 @@ VS Code 1.90 ships Node 20, so the global `fetch` is available.
 
 | Setting | Default | Description |
 |---|---|---|
-| `devdiary.serverUrl` | `http://localhost:4000` | DevDiary backend to use. Change it to your deployed or self-hosted URL |
+| `devdiary.serverUrl` | `https://devdiary-czdtetawaufxere0.southeastasia-01.azurewebsites.net` (the Azure deployment) | DevDiary backend to use. Set `http://localhost:4000` for local development, or your own URL if you self-host |
 | `devdiary.refreshInterval` | `5` | Minutes between background refreshes (minimum 1) |
 | `devdiary.notifications.dueTodos` | `true` | Show a notification when a todo becomes due |
 | `devdiary.statusBar.enabled` | `true` | Show the due-todo count in the status bar |
@@ -396,6 +396,6 @@ To try a packaged build: **Extensions → … → Install from VSIX…**.
 ## Open questions
 
 - **Publisher ID.** Built as `krishmal2004` (extension ID `krishmal2004.devdiary2026`). If the Marketplace publisher ends up different, change `publisher` in `vscode-extension/package.json` and set `VSCODE_EXTENSION_ID` on the server.
-- **Default `serverUrl`.** `http://localhost:4000` until there's a public deployment; change the default then.
+- **Default `serverUrl`.** The Azure App Service deployment. If the app moves or gets a custom domain, change the default in `vscode-extension/package.json` and `src/extension.js`, and release a new version.
 - **Display name.** "DevDiary" may already be taken on the Marketplace. Check before publishing.
 - **Multiple accounts.** v1 supports one signed-in account per server. Switching accounts means signing out first.

@@ -13,13 +13,14 @@ const diaryCommands = require("./commands/diary");
 const todoCommands = require("./commands/todos");
 
 const FOCUS_REFRESH_MS = 60 * 1000;
+const DEFAULT_SERVER_URL = "https://devdiary-czdtetawaufxere0.southeastasia-01.azurewebsites.net";
 
 function config() {
   return vscode.workspace.getConfiguration("devdiary");
 }
 
 function serverUrl() {
-  return (config().get("serverUrl") || "http://localhost:4000").trim().replace(/\/+$/, "");
+  return (config().get("serverUrl") || DEFAULT_SERVER_URL).trim().replace(/\/+$/, "");
 }
 
 async function activate(context) {
