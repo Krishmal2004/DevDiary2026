@@ -1339,6 +1339,26 @@ select.form-control {
   margin: 0;
 }
 
+.token-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+}
+
+.token-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.token-list li + li {
+  border-top: 1px solid var(--border-muted);
+}
+
 .dialog-footer {
   display: flex;
   justify-content: flex-end;

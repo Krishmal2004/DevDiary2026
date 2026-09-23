@@ -5,6 +5,8 @@ const cors = require("cors");
 const cookieSession = require("cookie-session");
 
 const authRouter = require("./routes/auth");
+const vscodeAuthRouter = require("./routes/vscodeAuth");
+const tokensRouter = require("./routes/tokens");
 const diaryRouter = require("./routes/diary");
 const todosRouter = require("./routes/todos");
 const githubRouter = require("./routes/github");
@@ -45,6 +47,8 @@ function createApp() {
     res.json({ status: "ok" });
   });
 
+  app.use("/auth/vscode", vscodeAuthRouter);
+  app.use("/auth/tokens", tokensRouter);
   app.use("/auth", authRouter);
   app.use("/api/diary", diaryRouter);
   app.use("/api/todos", todosRouter);

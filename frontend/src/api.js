@@ -38,6 +38,8 @@ export const api = {
   me: () => request("/auth/me"),
   updateMe: (changes) => request("/auth/me", { method: "PATCH", body: changes }),
   logout: () => request("/auth/logout", { method: "POST" }),
+  listTokens: () => request("/auth/tokens"),
+  revokeToken: (id) => request(`/auth/tokens/${id}`, { method: "DELETE" }),
 
   listDiary: (from, to) => request(`/api/diary?from=${from}&to=${to}`),
   saveDiary: (entry_date, content) => request("/api/diary", { method: "POST", body: { entry_date, content } }),

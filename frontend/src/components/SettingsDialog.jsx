@@ -1,6 +1,60 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
+import { timeAgo } from "../format";
 import Icon from "./Icon";
+
+// SQLite's datetime('now') is UTC without a zone marker.
+function sqliteTime(value) {
+  return value ? `${value.replace(" ", "T")}Z` : null;
+}
+
+// Editors (the VS Code extension) signed in with an API token.
+function ConnectedEditors() {
+  const [tokens, setTokens] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    api.listTokens().then(setTokens, (err) => setError(err.message));
+  }, []);
+
+  async function revoke(id) {
+    setError(null);
+    try {
+      await api.revokeToken(id);
+      setTokens((current) => current.filter((t) => t.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <div className="form-group">
+      <span className="form-label">Connected editors</span>
+      {tokens === null && !error && <span className="form-note">Loading…</span>}
+      {tokens?.length === 0 && (
+        <span className="form-note">None. Sign in from the DevDiary VS Code extension to connect one.</span>
+      )}
+      {tokens?.length > 0 && (
+        <ul className="token-list">
+          {tokens.map((t) => (
+            <li key={t.id}>
+              <span>
+                <strong>{t.name}</strong>
+                <span className="form-note">
+                  Connected {timeAgo(sqliteTime(t.created_at))} · last used {timeAgo(sqliteTime(t.last_used_at))}
+                </span>
+              </span>
+              <button type="button" className="btn btn-sm btn-danger" onClick={() => revoke(t.id)}>
+                Revoke
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p className="flash flash-error">{error}</p>}
+    </div>
+  );
+}
 
 export default function SettingsDialog({ user, onClose, onSaved }) {
   const [email, setEmail] = useState(user.email ?? "");
@@ -73,6 +127,8 @@ export default function SettingsDialog({ user, onClose, onSaved }) {
             <input className="form-control" type="text" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
             <span className="form-note">Used to show due times in reminder emails, e.g. Asia/Colombo.</span>
           </label>
+
+          <ConnectedEditors />
 
           {error && <p className="flash flash-error">{error}</p>}
         </div>

@@ -7,4 +7,5 @@ Detailed documentation for DevDiary2026. Start with the project [README](../READ
 - [Setup](./setup.md) — local development setup and environment variables
 - [Roadmap](./roadmap.md) — build order and project status
 - [Release](./release.md) — publishing the app, making it installable by anyone, and the Marketplace listing
+- [VS Code Extension](./vscode-extension.md) — design and build plan for the VS Code extension: features, token sign-in, backend changes, publishing
 - [Native Workflow Guide](./native-workflow-guide.md) — DIY version of this workflow using only native GitHub features (repo, Projects v2, Actions, Gists), written for the GitHub Community discussion

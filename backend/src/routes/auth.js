@@ -4,6 +4,7 @@ const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { requestToken } = require("../services/github");
 const { isValidEmail, isValidTimezone } = require("../validation");
+const { publicUser } = require("../users");
 
 const router = express.Router();
 
@@ -40,19 +41,6 @@ function upsertUser({ githubId, username, avatarUrl, email, tokens }) {
   );
 
   return db.prepare("SELECT * FROM users WHERE github_id = ?").get(githubId);
-}
-
-function publicUser(user) {
-  return {
-    id: user.id,
-    github_id: user.github_id,
-    username: user.username,
-    avatar_url: user.avatar_url,
-    email: user.email,
-    reminders_enabled: !!user.reminders_enabled,
-    timezone: user.timezone,
-    created_at: user.created_at,
-  };
 }
 
 router.get("/github", (req, res) => {
@@ -110,6 +98,11 @@ router.get("/github/callback", async (req, res) => {
     });
 
     req.session.userId = user.id;
+    // Sign-in started from the VS Code extension continues to its
+    // confirmation page instead of the dashboard.
+    if (req.session.vscodeRequest) {
+      return res.redirect(`${req.baseUrl}/vscode/authorize`);
+    }
     res.redirect(process.env.APP_BASE_URL);
   } catch (err) {
     console.error("GitHub OAuth callback failed:", err);

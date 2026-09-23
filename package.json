@@ -4,13 +4,16 @@
   "private": true,
   "description": "A personal dev diary, todos and email reminders that live alongside GitHub.",
   "scripts": {
-    "setup": "cd backend && npm install && cd ../frontend && npm install",
+    "setup": "cd backend && npm install && cd ../frontend && npm install && cd ../vscode-extension && npm install",
     "dev": "node scripts/dev.js",
     "migrate": "npm run migrate --prefix backend",
     "test": "npm test --prefix backend",
     "lint": "npm run lint --prefix frontend",
     "build": "npm run build --prefix frontend",
-    "start": "npm start --prefix backend"
+    "start": "npm start --prefix backend",
+    "ext:lint": "npm run lint --prefix vscode-extension",
+    "ext:test": "npm test --prefix vscode-extension && npm run test:integration --prefix vscode-extension",
+    "ext:package": "npm run package --prefix vscode-extension"
   },
   "engines": {
     "node": ">=20"

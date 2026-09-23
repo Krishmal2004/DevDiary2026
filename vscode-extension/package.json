@@ -1,0 +1,427 @@
+{
+  "name": "devdiary2026",
+  "displayName": "DevDiary",
+  "description": "Your DevDiary2026 diary, todos and today's GitHub activity, inside VS Code.",
+  "version": "0.1.0",
+  "publisher": "krishmal2004",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Krishmal2004/DevDiary2026.git",
+    "directory": "vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "diary",
+    "journal",
+    "todo",
+    "github",
+    "worklog"
+  ],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri",
+    "onFileSystem:devdiary"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devdiary",
+          "title": "DevDiary",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "devdiary": [
+        {
+          "id": "devdiary.today",
+          "name": "Today"
+        },
+        {
+          "id": "devdiary.todos",
+          "name": "Todos"
+        },
+        {
+          "id": "devdiary.diary",
+          "name": "Diary"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "devdiary.today",
+        "contents": "See today's commits, pull requests and reviews, and draft your diary from them.\n[Sign in with GitHub](command:devdiary.signIn)",
+        "when": "!devdiary.signedIn"
+      },
+      {
+        "view": "devdiary.todos",
+        "contents": "Sign in to see your todos.\n[Sign in with GitHub](command:devdiary.signIn)",
+        "when": "!devdiary.signedIn"
+      },
+      {
+        "view": "devdiary.todos",
+        "contents": "No todos yet.\n[Add Todo](command:devdiary.addTodo)",
+        "when": "devdiary.signedIn && devdiary.todosLoaded"
+      },
+      {
+        "view": "devdiary.diary",
+        "contents": "Sign in to write your diary.\n[Sign in with GitHub](command:devdiary.signIn)",
+        "when": "!devdiary.signedIn"
+      }
+    ],
+    "commands": [
+      {
+        "command": "devdiary.signIn",
+        "title": "Sign In with GitHub",
+        "category": "DevDiary",
+        "icon": "$(sign-in)"
+      },
+      {
+        "command": "devdiary.signOut",
+        "title": "Sign Out",
+        "category": "DevDiary",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "devdiary.pasteCode",
+        "title": "Paste Sign-In Code",
+        "category": "DevDiary"
+      },
+      {
+        "command": "devdiary.refresh",
+        "title": "Refresh",
+        "category": "DevDiary",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devdiary.openDashboard",
+        "title": "Open Dashboard",
+        "category": "DevDiary",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "devdiary.openToday",
+        "title": "Open Today's Diary",
+        "category": "DevDiary",
+        "icon": "$(book)"
+      },
+      {
+        "command": "devdiary.openDate",
+        "title": "Open Diary for Date…",
+        "category": "DevDiary",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "devdiary.draftFromGitHub",
+        "title": "Draft Diary from GitHub",
+        "category": "DevDiary",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "devdiary.addTodo",
+        "title": "Add Todo",
+        "category": "DevDiary",
+        "icon": "$(add)"
+      },
+      {
+        "command": "devdiary.toggleTodo",
+        "title": "Mark Todo Done / Reopen",
+        "category": "DevDiary",
+        "icon": "$(check)"
+      },
+      {
+        "command": "devdiary.reopenTodo",
+        "title": "Reopen",
+        "category": "DevDiary",
+        "icon": "$(issue-reopened)"
+      },
+      {
+        "command": "devdiary.editTodo",
+        "title": "Edit Todo Title",
+        "category": "DevDiary",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "devdiary.setDueDate",
+        "title": "Set Todo Due Date",
+        "category": "DevDiary",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "devdiary.deleteTodo",
+        "title": "Delete Todo",
+        "category": "DevDiary",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "devdiary.openTodoLink",
+        "title": "Open Linked URL",
+        "category": "DevDiary",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "devdiary.showDone",
+        "title": "Show Done Todos",
+        "category": "DevDiary",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "devdiary.hideDone",
+        "title": "Hide Done Todos",
+        "category": "DevDiary",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "devdiary.openUrl",
+        "title": "Open on GitHub",
+        "category": "DevDiary"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "devdiary.signIn",
+          "when": "!devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.signOut",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.reopenTodo",
+          "when": "false"
+        },
+        {
+          "command": "devdiary.openTodoLink",
+          "when": "false"
+        },
+        {
+          "command": "devdiary.openUrl",
+          "when": "false"
+        },
+        {
+          "command": "devdiary.showDone",
+          "when": "false"
+        },
+        {
+          "command": "devdiary.hideDone",
+          "when": "false"
+        },
+        {
+          "command": "devdiary.refresh",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.openToday",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.openDate",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.draftFromGitHub",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.addTodo",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.toggleTodo",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.editTodo",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.setDueDate",
+          "when": "devdiary.signedIn"
+        },
+        {
+          "command": "devdiary.deleteTodo",
+          "when": "devdiary.signedIn"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "devdiary.draftFromGitHub",
+          "when": "view == devdiary.today && devdiary.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devdiary.refresh",
+          "when": "view == devdiary.today && devdiary.signedIn",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devdiary.addTodo",
+          "when": "view == devdiary.todos && devdiary.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devdiary.showDone",
+          "when": "view == devdiary.todos && devdiary.signedIn && !devdiary.showDone",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devdiary.hideDone",
+          "when": "view == devdiary.todos && devdiary.signedIn && devdiary.showDone",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devdiary.refresh",
+          "when": "view == devdiary.todos && devdiary.signedIn",
+          "group": "navigation@3"
+        },
+        {
+          "command": "devdiary.openToday",
+          "when": "view == devdiary.diary && devdiary.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devdiary.openDate",
+          "when": "view == devdiary.diary && devdiary.signedIn",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devdiary.refresh",
+          "when": "view == devdiary.diary && devdiary.signedIn",
+          "group": "navigation@3"
+        },
+        {
+          "command": "devdiary.openDashboard",
+          "when": "view =~ /^devdiary\\./",
+          "group": "more@1"
+        },
+        {
+          "command": "devdiary.signOut",
+          "when": "view =~ /^devdiary\\./ && devdiary.signedIn",
+          "group": "more@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devdiary.toggleTodo",
+          "when": "view == devdiary.todos && viewItem =~ /^todo\\.open/",
+          "group": "inline@1"
+        },
+        {
+          "command": "devdiary.reopenTodo",
+          "when": "view == devdiary.todos && viewItem =~ /^todo\\.done/",
+          "group": "inline@1"
+        },
+        {
+          "command": "devdiary.editTodo",
+          "when": "view == devdiary.todos && viewItem =~ /^todo\\./",
+          "group": "1_edit@1"
+        },
+        {
+          "command": "devdiary.setDueDate",
+          "when": "view == devdiary.todos && viewItem =~ /^todo\\./",
+          "group": "1_edit@2"
+        },
+        {
+          "command": "devdiary.openTodoLink",
+          "when": "view == devdiary.todos && viewItem =~ /\\.linked$/",
+          "group": "2_open@1"
+        },
+        {
+          "command": "devdiary.deleteTodo",
+          "when": "view == devdiary.todos && viewItem =~ /^todo\\./",
+          "group": "3_delete@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "devdiary.draftFromGitHub",
+          "when": "resourceScheme == devdiary",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "devdiary.openToday",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d"
+      },
+      {
+        "command": "devdiary.addTodo",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t"
+      }
+    ],
+    "configuration": {
+      "title": "DevDiary",
+      "properties": {
+        "devdiary.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:4000",
+          "markdownDescription": "URL of the DevDiary2026 backend, e.g. `https://devdiary.example.com`. Each server keeps its own sign-in."
+        },
+        "devdiary.refreshInterval": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "description": "Minutes between background refreshes of todos and diary entries."
+        },
+        "devdiary.notifications.dueTodos": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a notification when a todo becomes due."
+        },
+        "devdiary.statusBar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the number of overdue and due-today todos in the status bar."
+        },
+        "devdiary.diary.draftMode": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "append",
+            "replace"
+          ],
+          "enumDescriptions": [
+            "Ask whether to append or replace",
+            "Add the draft after the existing text",
+            "Replace the existing text with the draft"
+          ],
+          "default": "ask",
+          "description": "What Draft Diary from GitHub does when the entry already has text."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint src test",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:integration": "vscode-test",
+    "package": "vsce package --no-dependencies --skip-license"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.2.1",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0"
+  }
+}
