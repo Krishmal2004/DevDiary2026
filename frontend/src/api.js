@@ -48,6 +48,9 @@ export const api = {
   updateTodo: (id, changes) => request(`/api/todos/${id}`, { method: "PUT", body: changes }),
   deleteTodo: (id) => request(`/api/todos/${id}`, { method: "DELETE" }),
 
+  repos: () => request("/api/github/repos"),
+  repo: (fullName) => request(`/api/github/repos/${fullName}`),
+
   activity: (date) =>
     request(`/api/github/activity?date=${date}&tzOffset=${new Date(`${date}T12:00:00`).getTimezoneOffset()}`),
 };

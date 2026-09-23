@@ -34,6 +34,7 @@ See the [docs](./docs) folder for details:
 - [GitHub App](./docs/github-app.md) — GitHub App configuration and permissions
 - [Setup](./docs/setup.md) — local development setup and environment variables
 - [Roadmap](./docs/roadmap.md) — build order and project status
+- [Release](./docs/release.md) — publishing DevDiary2026 as a public GitHub App / Marketplace listing
 - [Native Workflow Guide](./docs/native-workflow-guide.md) — a full DIY implementation using only native GitHub features (no app required)
 
 ## Setup / Getting Started

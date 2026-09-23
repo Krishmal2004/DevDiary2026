@@ -3,7 +3,35 @@ import { api, loginUrl } from "./api";
 import DiaryPanel from "./components/DiaryPanel";
 import TodosPanel from "./components/TodosPanel";
 import SettingsDialog from "./components/SettingsDialog";
+import ReposPage from "./components/ReposPage";
 import "./App.css";
+
+const PAGES = [
+  ["#/", "Dashboard"],
+  ["#/repos", "Repositories"],
+];
+
+function useHashRoute() {
+  const [hash, setHash] = useState(() => window.location.hash || "#/");
+  useEffect(() => {
+    const onChange = () => setHash(window.location.hash || "#/");
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return hash;
+}
+
+function Footer() {
+  return (
+    <footer className="footer">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="https://github.com/Krishmal2004/DevDiary2026" target="_blank" rel="noreferrer">
+        Source
+      </a>
+    </footer>
+  );
+}
 
 function Login() {
   return (
@@ -18,6 +46,7 @@ function Login() {
           Sign in with GitHub
         </a>
       </div>
+      <Footer />
     </main>
   );
 }
@@ -27,6 +56,7 @@ function App() {
   const [state, setState] = useState("loading");
   const [error, setError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const route = useHashRoute();
 
   useEffect(() => {
     api
@@ -73,7 +103,14 @@ function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">DevDiary2026</span>
+        <nav className="topbar-nav">
+          <span className="brand">DevDiary2026</span>
+          {PAGES.map(([href, label]) => (
+            <a key={href} href={href} className="nav-link" aria-current={route === href ? "page" : undefined}>
+              {label}
+            </a>
+          ))}
+        </nav>
         <div className="topbar-user">
           {user.avatar_url && <img src={user.avatar_url} alt="" className="avatar" />}
           <span className="username">{user.username}</span>
@@ -86,10 +123,17 @@ function App() {
         </div>
       </header>
 
-      <main className="dashboard">
-        <DiaryPanel />
-        <TodosPanel remindersActive={!!user.email && user.reminders_enabled} />
-      </main>
+      {route === "#/repos" ? (
+        <main className="page">
+          <ReposPage />
+        </main>
+      ) : (
+        <main className="dashboard">
+          <DiaryPanel />
+          <TodosPanel remindersActive={!!user.email && user.reminders_enabled} />
+        </main>
+      )}
+      <Footer />
 
       {showSettings && <SettingsDialog user={user} onClose={() => setShowSettings(false)} onSaved={setUser} />}
     </div>

@@ -242,7 +242,23 @@ test("GitHub activity is fetched for the user's local day and drafted as markdow
   githubHandler = async (url, options) => {
     const { query, variables } = JSON.parse(options.body);
     calls.push({ url, query, variables, auth: options.headers.Authorization });
-    const data = query.includes("contributionsCollection")
+    const issueData = {
+      viewer: {
+        contributionsCollection: {
+          issueContributions: {
+            nodes: [
+              {
+                occurredAt: "2026-09-20T11:00:00Z",
+                issue: { title: "Crash on start", url: "https://github.com/alice/app/issues/3", number: 3, state: "OPEN", repository: { nameWithOwner: "alice/app" } },
+              },
+            ],
+          },
+        },
+      },
+    };
+    const data = query.includes("issueContributions")
+      ? issueData
+      : query.includes("contributionsCollection")
       ? {
           viewer: {
             id: "U_alice",
@@ -288,8 +304,9 @@ test("GitHub activity is fetched for the user's local day and drafted as markdow
   assert.match(calls[1].query, /repository\(owner: "alice", name: "app"\)/);
   assert.equal(calls[1].variables.authorId, "U_alice");
 
-  assert.deepEqual(res.body.totals, { commits: 2, pullRequests: 1, reviews: 0 });
+  assert.deepEqual(res.body.totals, { commits: 2, pullRequests: 1, reviews: 0, issues: 1 });
   assert.match(res.body.markdown, /## What I worked on — 2026-09-20/);
+  assert.match(res.body.markdown, /### Issues\n- Opened \[Crash on start\]/);
   assert.match(res.body.markdown, /Opened \[Add login\]\(https:\/\/github\.com\/alice\/app\/pull\/7\)/);
   assert.match(res.body.markdown, /`abcdef1`.*Fix bug/);
 });
@@ -317,6 +334,7 @@ test("expired GitHub tokens are refreshed before use", async () => {
             commitContributionsByRepository: [],
             pullRequestContributions: { nodes: [] },
             pullRequestReviewContributions: { nodes: [] },
+            issueContributions: { nodes: [] },
           },
         },
       },
@@ -325,7 +343,7 @@ test("expired GitHub tokens are refreshed before use", async () => {
 
   const res = await api("/api/github/activity?date=2026-09-20", { user: bob });
   assert.equal(res.status, 200);
-  assert.deepEqual(seen, ["Bearer fresh"]);
+  assert.deepEqual(seen, ["Bearer fresh", "Bearer fresh"]);
   assert.match(res.body.markdown, /No GitHub activity/);
 
   const stored = db.prepare("SELECT access_token, refresh_token FROM users WHERE id = ?").get(bob.id);
@@ -334,7 +352,149 @@ test("expired GitHub tokens are refreshed before use", async () => {
 
 test("a rejected GitHub token asks the client to sign in again", async () => {
   githubHandler = async () => new Response("{}", { status: 401 });
-  const res = await api("/api/github/activity?date=2026-09-20", { user: alice });
-  assert.equal(res.status, 401);
-  assert.equal(res.body.reauth, true);
+  for (const path of ["/api/github/activity?date=2026-09-20", "/api/github/repos", "/api/github/repos/alice/app"]) {
+    const res = await api(path, { user: alice });
+    assert.equal(res.status, 401, path);
+    assert.equal(res.body.reauth, true, path);
+  }
+});
+
+test("repositories are listed across every installation, paginated and de-duplicated", async () => {
+  const repo = (id, name, pushedAt) => ({
+    id,
+    full_name: `alice/${name}`,
+    name,
+    owner: { login: "alice" },
+    html_url: `https://github.com/alice/${name}`,
+    description: null,
+    private: id % 2 === 0,
+    fork: false,
+    archived: false,
+    language: "JavaScript",
+    stargazers_count: 1,
+    forks_count: 0,
+    open_issues_count: 2,
+    default_branch: "main",
+    pushed_at: pushedAt,
+  });
+  const page1 = Array.from({ length: 100 }, (_, i) => repo(i + 1, `repo${i + 1}`, "2026-01-01T00:00:00Z"));
+  const page2 = [repo(101, "newest", "2026-09-01T00:00:00Z")];
+
+  const paths = [];
+  githubHandler = async (url) => {
+    const { pathname, searchParams } = new URL(url);
+    paths.push(pathname + (searchParams.get("page") ? `?page=${searchParams.get("page")}` : ""));
+    if (pathname === "/user/installations") {
+      return Response.json({
+        total_count: 2,
+        installations: [
+          { id: 10, account: { login: "alice" }, repository_selection: "all", html_url: "https://github.com/settings/installations/10" },
+          { id: 20, account: { login: "acme" }, repository_selection: "selected", html_url: "https://github.com/organizations/acme/settings/installations/20" },
+        ],
+      });
+    }
+    if (pathname === "/user/installations/10/repositories") {
+      const page = searchParams.get("page");
+      return Response.json({ total_count: 101, repositories: page === "1" ? page1 : page2 });
+    }
+    // The acme installation also exposes a repo already seen via alice's.
+    return Response.json({ total_count: 1, repositories: [repo(101, "newest", "2026-09-01T00:00:00Z")] });
+  };
+
+  const res = await api("/api/github/repos", { user: alice });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.repositories.length, 101);
+  assert.equal(res.body.repositories[0].fullName, "alice/newest");
+  assert.equal(res.body.installations.length, 2);
+  assert.match(res.body.installUrl, /^https:\/\/github\.com\/apps\/[\w-]+\/installations\/new$/);
+  assert.ok(paths.includes("/user/installations/10/repositories?page=2"));
+});
+
+test("repository details include commits, PRs and issues, tolerating missing issue access", async () => {
+  githubHandler = async (url, options) => {
+    const { query, variables } = JSON.parse(options.body);
+    assert.deepEqual(variables, { owner: "alice", name: "app" });
+    if (query.includes("issues(")) {
+      return Response.json({ data: { repository: null }, errors: [{ message: "Resource not accessible by integration" }] });
+    }
+    return Response.json({
+      data: {
+        repository: {
+          nameWithOwner: "alice/app",
+          url: "https://github.com/alice/app",
+          description: "An app",
+          isPrivate: true,
+          stargazerCount: 3,
+          forkCount: 1,
+          primaryLanguage: { name: "TypeScript" },
+          defaultBranchRef: {
+            name: "main",
+            target: {
+              history: {
+                totalCount: 42,
+                nodes: [{ oid: "abc1234", messageHeadline: "Init", url: "https://github.com/alice/app/commit/abc1234", committedDate: "2026-09-20T09:00:00Z", author: { name: "Alice", user: { login: "alice" } } }],
+              },
+            },
+          },
+          pullRequests: {
+            totalCount: 1,
+            nodes: [{ number: 7, title: "Add login", url: "https://github.com/alice/app/pull/7", isDraft: false, updatedAt: "2026-09-20T10:00:00Z", author: { login: "alice" } }],
+          },
+        },
+      },
+    });
+  };
+
+  const res = await api("/api/github/repos/alice/app", { user: alice });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.commits.totalCount, 42);
+  assert.equal(res.body.commits.items[0].author, "alice");
+  assert.equal(res.body.pullRequests.items[0].title, "Add login");
+  assert.equal(res.body.issues, null);
+  assert.match(res.body.issuesError, /Issues/);
+
+  assert.equal((await api("/api/github/repos/alice/..%2F..%2Fetc", { user: alice })).status, 400);
+});
+
+test("installing the app from GitHub restarts sign-in instead of failing the state check", async () => {
+  const res = await api("/auth/github/callback?code=abc&installation_id=123&setup_action=install");
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("location"), "/auth/github");
+});
+
+test("webhooks verify signatures and clear tokens when access is revoked", async () => {
+  const crypto = require("node:crypto");
+  const sign = (body, secret) => `sha256=${crypto.createHmac("sha256", secret).update(body).digest("hex")}`;
+  const send = (body, signature, event = "github_app_authorization") =>
+    realFetch(`${baseUrl}/webhooks/github`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-GitHub-Event": event, "X-Hub-Signature-256": signature },
+      body,
+    });
+
+  const carol = createUser(3, "carol");
+  const body = JSON.stringify({ action: "revoked", sender: { id: 3, login: "carol" } });
+
+  delete process.env.GITHUB_WEBHOOK_SECRET;
+  assert.equal((await send(body, sign(body, "whsec"))).status, 503);
+
+  process.env.GITHUB_WEBHOOK_SECRET = "whsec";
+  try {
+    assert.equal((await send(body, sign(body, "wrong"))).status, 401);
+    assert.equal((await send(body, "")).status, 401);
+    assert.equal(db.prepare("SELECT access_token FROM users WHERE id = ?").get(carol.id).access_token, "token-carol");
+
+    assert.equal((await send(body, sign(body, "whsec"))).status, 204);
+    assert.equal(db.prepare("SELECT access_token FROM users WHERE id = ?").get(carol.id).access_token, "");
+
+    // With no token left, GitHub calls ask the user to sign in again.
+    const res = await api("/api/github/repos", { user: carol });
+    assert.equal(res.status, 401);
+    assert.equal(res.body.reauth, true);
+
+    const ping = JSON.stringify({ zen: "hi" });
+    assert.equal((await send(ping, sign(ping, "whsec"), "ping")).status, 204);
+  } finally {
+    delete process.env.GITHUB_WEBHOOK_SECRET;
+  }
 });

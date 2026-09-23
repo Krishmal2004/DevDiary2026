@@ -7,9 +7,12 @@
 - [x] Backend: todo storage with due dates (per user)
 - [x] Backend: scheduled job + email reminders
 - [x] Frontend: dashboard (diary view + todo view)
-- [x] Automated end-to-end API tests (`npm test`)
+- [x] Automated end-to-end API tests (`npm test`) and CI on every push
+- [x] Repositories page: all installed repositories with their commits, PRs and issues
+- [x] Release readiness: webhook receiver, privacy and terms pages, tag-triggered release workflow ([release.md](./release.md))
 - [ ] Test end-to-end on personal account (sign in, draft a diary entry from real activity, receive a reminder email)
 - [ ] Deploy to a public host (the Dockerfile is ready; see [setup.md](./setup.md#deploying))
+- [ ] Make the GitHub App public ("Any account")
 - [ ] Submit to GitHub Marketplace (optional)
 
 ## Post-MVP
@@ -21,4 +24,4 @@
 
 ## Status
 
-✅ MVP feature-complete. GitHub sign-in, a diary drafted from your commits/PRs, personal todos and email reminders all work locally. Still to do: a manual run on a real account with a real email provider, and deploying.
+✅ MVP feature-complete and ready to release. GitHub sign-in, a diary drafted from your commits/PRs/issues, a Repositories page, personal todos and email reminders all work locally. Still to do: a manual run on a real account, then deploying and making the app public by following [release.md](./release.md).

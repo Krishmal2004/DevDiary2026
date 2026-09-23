@@ -54,6 +54,8 @@ All backend configuration lives in `backend/.env`:
 | `GITHUB_CLIENT_ID` | yes | GitHub App client ID. |
 | `GITHUB_CLIENT_SECRET` | yes | GitHub App client secret. |
 | `GITHUB_PRIVATE_KEY_PATH` | no | Path to the app's `.pem` private key. Not used yet; it's only needed for installation-level API calls. |
+| `GITHUB_APP_SLUG` | no | The app's URL name (`https://github.com/apps/<slug>`). Used for the "Add repositories" install link. Default `devdiary2026`. |
+| `GITHUB_WEBHOOK_SECRET` | for webhooks | Secret shared with the GitHub App webhook. Without it, `/webhooks/github` returns 503. |
 | `SESSION_SECRET` | yes | Long random string that signs session cookies. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
 | `DATABASE_PATH` | no | SQLite file location. Default `./data/devdiary.sqlite`. |
 | `EMAIL_PROVIDER` | no | `resend` (default) or `postmark`. |
