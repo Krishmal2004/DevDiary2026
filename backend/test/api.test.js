@@ -770,3 +770,30 @@ test("revoking the GitHub App disconnects the user's editors", async () => {
   }
   assert.equal((await api("/api/todos", { token })).status, 401);
 });
+
+test("VS Code sign-in accepts the callback URI as VS Code actually sends it", async () => {
+  // asExternalUri adds ?windowId=N, and openExternal encodes it twice.
+  const b = browser(alice);
+  const { query, verifier } = startQuery({ redirect_uri: undefined });
+  const started = await b(`/auth/vscode/start?${query}&redirect_uri=vscode://krishmal2004.devdiary2026/auth%253FwindowId=1`);
+  assert.equal(started.status, 302);
+  assert.equal(started.location, "/auth/vscode/authorize");
+
+  const nonce = nonceFrom((await b("/auth/vscode/authorize")).text);
+  const allowed = await b("/auth/vscode/authorize", { method: "POST", form: { nonce, decision: "allow" } });
+  const refresh = /http-equiv="refresh" content="0;url=([^"]+)"/.exec(allowed.text)[1].replace(/&amp;/g, "&");
+  const url = new URL(refresh);
+  assert.equal(`${url.protocol}//${url.host}${url.pathname}`, EXTENSION_REDIRECT);
+  assert.equal(url.searchParams.get("windowId"), "1");
+  assert.equal(url.searchParams.get("state"), STATE);
+
+  const res = await api("/auth/vscode/token", {
+    method: "POST",
+    body: { code: url.searchParams.get("code"), code_verifier: verifier },
+  });
+  assert.equal(res.status, 200);
+
+  // Decoding doesn't let other apps through.
+  const evil = await b(`/auth/vscode/start?${query}&redirect_uri=vscode%253A%252F%252Fsomeone.else%252Fauth`);
+  assert.equal(evil.status, 400);
+});
