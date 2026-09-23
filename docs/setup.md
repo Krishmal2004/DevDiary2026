@@ -63,6 +63,7 @@ All backend configuration lives in `backend/.env`:
 | `EMAIL_FROM` | with a key | Sender address. It must be verified with your email provider. |
 | `REMINDER_CRON` | no | How often to check for due todos, in cron syntax. Default `* * * * *` (every minute). |
 | `DISABLE_SCHEDULER` | no | Set to `true` to turn off the reminder job, for example on extra instances. |
+| `VSCODE_EXTENSION_ID` | no | ID of the VS Code extension (`<publisher>.<name>`) allowed to receive sign-in codes. Default `krishmal2004.devdiary2026`. See [vscode-extension.md](./vscode-extension.md). |
 
 The frontend needs no configuration in development: Vite proxies `/api` and `/auth` to `http://localhost:4000`. You only need to set `VITE_API_BASE_URL` in `frontend/.env` if you host the API on a different origin than the dashboard.
 

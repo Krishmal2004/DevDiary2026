@@ -21,7 +21,7 @@
 - [ ] Personal goal tracking with progress pulled from linked PRs
 - [x] Consistency/streak view of coding activity (contribution graph, coding and writing streaks)
 - [ ] Cross-repo personal dashboard
-- [ ] VS Code extension: diary, todos and today's activity in the editor ([vscode-extension.md](./vscode-extension.md))
+- [x] VS Code extension: diary, todos and today's activity in the editor ([vscode-extension.md](./vscode-extension.md)). Built and tested; publishing still to do
 
 ## Status
 
