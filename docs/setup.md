@@ -58,6 +58,7 @@ All backend configuration lives in `backend/.env`:
 | `GITHUB_WEBHOOK_SECRET` | for webhooks | Secret shared with the GitHub App webhook. Without it, `/webhooks/github` returns 503. |
 | `SESSION_SECRET` | yes | Long random string that signs session cookies. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
 | `DATABASE_PATH` | no | SQLite file location. Default `./data/devdiary.sqlite`. |
+| `SQLITE_JOURNAL_MODE` | no | `WAL` (default), or `DELETE` when the database is on a network file system such as Azure App Service's `/home` or Azure Files, where WAL doesn't work. |
 | `EMAIL_PROVIDER` | no | `resend` (default) or `postmark`. |
 | `EMAIL_API_KEY` | no | API key for the email provider. **If it's unset, reminder emails are printed to the backend console instead of sent.** |
 | `EMAIL_FROM` | with a key | Sender address. It must be verified with your email provider. |
