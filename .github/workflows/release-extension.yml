@@ -56,7 +56,7 @@ jobs:
 
       - name: Publish to the VS Code Marketplace
         if: env.VSCE_PAT != ''
-        run: npx vsce publish --no-dependencies --skip-license --packagePath devdiary2026-*.vsix
+        run: npx vsce publish --no-dependencies --packagePath devdiary2026-*.vsix
 
       - name: Publish to Open VSX
         if: env.OVSX_PAT != ''

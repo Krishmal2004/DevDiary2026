@@ -367,7 +367,7 @@ To try a packaged build: **Extensions → … → Install from VSIX…**.
 - **Secrets:** add `VSCE_PAT` and `OVSX_PAT` as repository secrets. Until one is set, the release workflow skips publishing to that marketplace and only attaches the `.vsix` to the GitHub Release.
 - **Versioning:** the extension has its own version in `vscode-extension/package.json` and its own tags, `ext-v0.1.0`, so it can ship independently of the backend's `v*` tags.
 - **Release workflow:** `.github/workflows/release-extension.yml`, triggered by `ext-v*` tags. It runs CI, checks the tag matches the version in `package.json`, packages the `.vsix`, attaches it to a GitHub Release, and publishes with `vsce publish` and `ovsx publish`.
-- **License:** the project has no license yet, so packaging uses `--skip-license`. Add a `LICENSE` before publishing to the Marketplace.
+- **License:** MIT (`LICENSE` at the repo root, copied into `vscode-extension/` because `vsce` and Open VSX read it from the package).
 - **Marketplace page:** `vscode-extension/README.md` with screenshots of the three views, the diary editor and the sign-in page. Link the [privacy policy](../frontend/public/privacy.html) and state that the extension only talks to the configured DevDiary server.
 - **Hosting dependency:** the extension is only useful to others once the backend is deployed publicly ([roadmap](./roadmap.md)). Until then, publish as a pre-release (`vsce publish --pre-release`) or share the `.vsix`.
 
@@ -390,12 +390,12 @@ To try a packaged build: **Extensions → … → Install from VSIX…**.
 - [x] Update [architecture.md](./architecture.md), [roadmap.md](./roadmap.md) and the project README
 - [ ] Manual run on a real account: GitHub sign-in, the `vscode://` handoff, and the paste-code fallback
 - [ ] Screenshots for the Marketplace README
-- [ ] Add a `LICENSE`, create the publisher and tokens, tag `ext-v0.1.0`
+- [x] Add a `LICENSE` (MIT)
+- [ ] Create the publisher and tokens, tag `ext-v0.1.0`
 
 ## Open questions
 
 - **Publisher ID.** Built as `krishmal2004` (extension ID `krishmal2004.devdiary2026`). If the Marketplace publisher ends up different, change `publisher` in `vscode-extension/package.json` and set `VSCODE_EXTENSION_ID` on the server.
 - **Default `serverUrl`.** `http://localhost:4000` until there's a public deployment; change the default then.
-- **License.** Needed before publishing to the Marketplace.
 - **Display name.** "DevDiary" may already be taken on the Marketplace. Check before publishing.
 - **Multiple accounts.** v1 supports one signed-in account per server. Switching accounts means signing out first.

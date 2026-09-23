@@ -70,4 +70,4 @@ See [docs/setup.md](./docs/setup.md) for environment variables and deployment.
 
 ## License
 
-TBD
+[MIT](./LICENSE)
