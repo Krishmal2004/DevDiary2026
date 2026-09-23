@@ -1,100 +1,98 @@
 import { useEffect, useState } from "react";
+import { api, loginUrl } from "./api";
+import DiaryPanel from "./components/DiaryPanel";
+import TodosPanel from "./components/TodosPanel";
+import SettingsDialog from "./components/SettingsDialog";
 import "./App.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+function Login() {
+  return (
+    <main className="login">
+      <div className="login-card">
+        <h1>DevDiary2026</h1>
+        <p className="tagline">
+          Your personal work log alongside GitHub — a daily diary drafted from your commits and PRs, todos that
+          aren&apos;t tied to any repo, and email reminders when they&apos;re due.
+        </p>
+        <a className="button github" href={loginUrl}>
+          Sign in with GitHub
+        </a>
+      </div>
+    </main>
+  );
+}
 
 function App() {
-  const [todos, setTodos] = useState([]);
-  const [diaryEntries, setDiaryEntries] = useState([]);
-  const [newTodo, setNewTodo] = useState("");
+  const [user, setUser] = useState(null);
+  const [state, setState] = useState("loading");
   const [error, setError] = useState(null);
-
-  async function loadData() {
-    try {
-      const [todosRes, diaryRes] = await Promise.all([
-        fetch(`${API_BASE}/api/todos`),
-        fetch(`${API_BASE}/api/diary`),
-      ]);
-      setTodos(await todosRes.json());
-      setDiaryEntries(await diaryRes.json());
-      setError(null);
-    } catch (err) {
-      setError("Could not reach the backend. Is it running on " + API_BASE + "?");
-    }
-  }
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-    loadData();
+    api
+      .me()
+      .then(async (me) => {
+        // Record the browser's time zone the first time, for reminder emails.
+        if (!me.timezone) {
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          me = await api.updateMe({ timezone }).catch(() => me);
+        }
+        setUser(me);
+        setState("ready");
+      })
+      .catch((err) => {
+        if (err.status === 401) {
+          setState("signed-out");
+        } else {
+          setError(err.message);
+          setState("error");
+        }
+      });
   }, []);
 
-  async function addTodo(e) {
-    e.preventDefault();
-    if (!newTodo.trim()) return;
-    await fetch(`${API_BASE}/api/todos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTodo }),
-    });
-    setNewTodo("");
-    loadData();
+  async function logout() {
+    await api.logout().catch(() => {});
+    setUser(null);
+    setState("signed-out");
   }
 
-  async function toggleTodo(todo) {
-    await fetch(`${API_BASE}/api/todos/${todo.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done: !todo.done }),
-    });
-    loadData();
+  if (state === "loading") {
+    return <main className="centered">Loading…</main>;
+  }
+  if (state === "error") {
+    return (
+      <main className="centered">
+        <p className="notice error">{error}</p>
+      </main>
+    );
+  }
+  if (state === "signed-out") {
+    return <Login />;
   }
 
   return (
-    <main className="dashboard">
-      <h1>DevDiary2026</h1>
-      {error && <p className="error">{error}</p>}
+    <div className="app">
+      <header className="topbar">
+        <span className="brand">DevDiary2026</span>
+        <div className="topbar-user">
+          {user.avatar_url && <img src={user.avatar_url} alt="" className="avatar" />}
+          <span className="username">{user.username}</span>
+          <button type="button" className="secondary small" onClick={() => setShowSettings(true)}>
+            Settings
+          </button>
+          <button type="button" className="secondary small" onClick={logout}>
+            Sign out
+          </button>
+        </div>
+      </header>
 
-      <section>
-        <h2>Todos</h2>
-        <form onSubmit={addTodo} className="todo-form">
-          <input
-            type="text"
-            value={newTodo}
-            onChange={(e) => setNewTodo(e.target.value)}
-            placeholder="What do you need to do?"
-          />
-          <button type="submit">Add</button>
-        </form>
-        <ul className="todo-list">
-          {todos.map((todo) => (
-            <li key={todo.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={!!todo.done}
-                  onChange={() => toggleTodo(todo)}
-                />
-                <span className={todo.done ? "done" : ""}>{todo.title}</span>
-              </label>
-              {todo.due_date && <span className="due">due {todo.due_date}</span>}
-            </li>
-          ))}
-          {todos.length === 0 && <li className="empty">No todos yet.</li>}
-        </ul>
-      </section>
+      <main className="dashboard">
+        <DiaryPanel />
+        <TodosPanel remindersActive={!!user.email && user.reminders_enabled} />
+      </main>
 
-      <section>
-        <h2>Diary</h2>
-        <ul className="diary-list">
-          {diaryEntries.map((entry) => (
-            <li key={entry.id}>
-              <strong>{entry.entry_date}</strong>
-              <p>{entry.content}</p>
-            </li>
-          ))}
-          {diaryEntries.length === 0 && <li className="empty">No entries yet.</li>}
-        </ul>
-      </section>
-    </main>
+      {showSettings && <SettingsDialog user={user} onClose={() => setShowSettings(false)} onSaved={setUser} />}
+    </div>
   );
 }
 
