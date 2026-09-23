@@ -23,13 +23,14 @@ Developers currently patch this together with disconnected tools (Notion, notebo
 
 | Layer | Choice |
 |---|---|
-| Auth | GitHub App user authorization (OAuth), signed cookie sessions |
+| Auth | GitHub App user authorization (OAuth), signed cookie sessions; API tokens for the VS Code extension |
 | Backend | Node.js / Express (`backend/`) |
 | Database | SQLite via better-sqlite3, with versioned migrations |
 | Scheduler | node-cron, running inside the backend process |
 | Email | Resend or Postmark over HTTPS; logs to the console when no key is set |
 | Frontend | React + Vite dashboard (`frontend/`): calendar view for the diary, list view for todos |
 | Hosting | One Docker container (Render / Railway / Fly.io) |
+| Editor | VS Code extension (`vscode-extension/`), plain JavaScript with no runtime dependencies |
 
 ## Code layout
 
@@ -38,14 +39,17 @@ backend/src/
   index.js              starts the server and the reminder scheduler
   app.js                Express app: middleware, routes, serves frontend/dist in production
   validation.js         input validators (dates, URLs, emails, time zones)
+  users.js              publicUser(): the user fields safe to send to clients
   db/
     index.js            opens SQLite and applies pending migrations
     migrations.js       ordered schema migrations, tracked with PRAGMA user_version
     migrate.js          `npm run migrate` entry point
   middleware/
-    requireAuth.js      loads req.user from the session, or returns 401
+    requireAuth.js      loads req.user from an API token or the session, or returns 401
   routes/
     auth.js             GitHub sign-in, /auth/me profile and settings, logout
+    vscodeAuth.js       VS Code extension sign-in (authorization code + PKCE)
+    tokens.js           list and revoke API tokens ("Connected editors")
     diary.js            diary entries
     todos.js            todos
     github.js           daily activity pull, diary draft, repositories
@@ -54,6 +58,7 @@ backend/src/
     github.js           token exchange and refresh, GraphQL activity queries, markdown draft
     email.js            Resend / Postmark / console sender
     reminders.js        due-todo check and cron scheduling
+    apiTokens.js        API tokens and one-time sign-in codes (stored hashed)
 backend/test/           API tests (node:test)
 
 frontend/src/
@@ -74,10 +79,12 @@ frontend/src/
     Calendar.jsx        month grid; days with an entry get a dot
     Markdown.jsx        small, safe markdown renderer for previews
     TodosPanel.jsx      issue-list-style todos: Open / Done, create, edit, reopen
-    SettingsDialog.jsx  reminder email, on/off switch, time zone
+    SettingsDialog.jsx  reminder email, on/off switch, time zone, connected editors
     Icon.jsx            16px line icons
 frontend/public/        privacy.html, terms.html (required for a Marketplace listing)
-.github/workflows/      ci.yml (test, lint, build) and release.yml (tag → Docker image + GitHub Release)
+vscode-extension/       the VS Code extension; see vscode-extension.md
+.github/workflows/      ci.yml (test, lint, build, extension tests), release.yml (v* tag → Docker image + GitHub Release)
+                        and release-extension.yml (ext-v* tag → .vsix + Marketplace / Open VSX)
 ```
 
 ## Data model
@@ -87,10 +94,12 @@ frontend/public/        privacy.html, terms.html (required for a Marketplace lis
 | `users` | `github_id`, `username`, `avatar_url`, `email`, `reminders_enabled`, `timezone`, `access_token`, `refresh_token`, `token_expires_at` |
 | `diary_entries` | `user_id`, `entry_date` (`YYYY-MM-DD`, one per user per day), `content` (markdown) |
 | `todos` | `user_id`, `title`, `due_date` (UTC ISO timestamp, or `YYYY-MM-DD` for all-day), `done`, `linked_url`, `reminder_sent_at` |
+| `api_tokens` | `user_id`, `name` (e.g. "Visual Studio Code on my-laptop"), `token_hash` (SHA-256), `last_used_at` |
+| `auth_codes` | `code_hash`, `user_id`, `code_challenge` (PKCE), `client_name`, `expires_at` (5 minutes), `used_at` |
 
 ## API
 
-Every route except `/health` and the sign-in routes needs a signed-in session. Each user can only see and change their own data.
+Every route except `/health` and the sign-in routes needs a signed-in session, or an API token sent as `Authorization: Bearer ddv_…` (used by the VS Code extension). Each user can only see and change their own data.
 
 | Method | Path | Description |
 |---|---|---|
@@ -100,6 +109,11 @@ Every route except `/health` and the sign-in routes needs a signed-in session. E
 | GET | `/auth/me` | Current user and their settings |
 | PATCH | `/auth/me` | Updates `email`, `reminders_enabled` or `timezone` |
 | POST | `/auth/logout` | Clears the session |
+| GET | `/auth/vscode/start` | Starts VS Code extension sign-in (PKCE). Signs in with GitHub first if needed |
+| GET / POST | `/auth/vscode/authorize` | Confirmation page; Allow issues a one-time code and returns it to the editor |
+| POST | `/auth/vscode/token` | Exchanges `{ code, code_verifier }` for an API token |
+| GET | `/auth/tokens` | The user's API tokens (metadata only) |
+| DELETE | `/auth/tokens/:id`, `/auth/tokens/current` | Revokes one token, or the one making the request |
 | GET | `/api/diary?from=&to=` | Entries in a date range (inclusive) |
 | GET | `/api/diary/date/:date` | The entry for one day |
 | POST | `/api/diary` | Creates the entry for `entry_date`, or replaces it if one exists |
@@ -110,7 +124,7 @@ Every route except `/health` and the sign-in routes needs a signed-in session. E
 | GET | `/api/github/contributions` | Your GitHub contribution graph for the last year (levels 0–4 per day) |
 | GET | `/api/github/repos` | Every repository the app can see, across all installations, with the install link |
 | GET | `/api/github/repos/:owner/:name` | Recent commits, open PRs and open issues for one repository |
-| POST | `/webhooks/github` | GitHub App webhooks (HMAC-verified). Clears a user's stored tokens when they revoke the app. |
+| POST | `/webhooks/github` | GitHub App webhooks (HMAC-verified). Clears a user's stored tokens and API tokens when they revoke the app. |
 
 ## How the pieces work
 
@@ -118,6 +132,7 @@ Every route except `/health` and the sign-in routes needs a signed-in session. E
 - **Token refresh.** GitHub App user tokens expire after 8 hours. The backend stores the refresh token and swaps it for a new access token before calling GitHub. If GitHub still rejects the token, the dashboard asks you to sign in again.
 - **Reminders.** Every minute (`REMINDER_CRON`), the scheduler finds open todos that are past due, not yet reminded, and belong to users with reminders on and an email set. It sends each user one email listing those todos, then sets `reminder_sent_at`. Moving a todo's due date clears `reminder_sent_at`, so the reminder fires again. If sending fails, the todo stays unmarked and the next run retries.
 - **Repositories.** GitHub App user tokens only see repositories the app is installed on. The backend lists your installations (`/user/installations`), goes through every page of each one's repositories, and removes duplicates. To load *all* of your repos, install the app with "All repositories" selected. The page shows a link for that.
+- **Editor sign-in.** The VS Code extension can't use cookies, so it signs in through the browser and gets an API token. See [vscode-extension.md](./vscode-extension.md#authentication) for the flow.
 - **Email address.** Without the "Email addresses" permission, the app can only read your public GitHub email. You can set or change the reminder email in Settings.
 
 ## Features

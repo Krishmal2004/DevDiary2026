@@ -35,7 +35,7 @@ See the [docs](./docs) folder for details:
 - [Setup](./docs/setup.md) — local development setup and environment variables
 - [Roadmap](./docs/roadmap.md) — build order and project status
 - [Release](./docs/release.md) — publishing DevDiary2026 as a public GitHub App / Marketplace listing
-- [VS Code Extension](./docs/vscode-extension.md) — planned VS Code extension: diary, todos and today's activity inside the editor
+- [VS Code Extension](./docs/vscode-extension.md) — the VS Code extension in [`vscode-extension/`](./vscode-extension): diary, todos and today's activity inside the editor
 - [Native Workflow Guide](./docs/native-workflow-guide.md) — a full DIY implementation using only native GitHub features (no app required)
 
 ## Setup / Getting Started
