@@ -48,7 +48,8 @@ backend/src/
     auth.js             GitHub sign-in, /auth/me profile and settings, logout
     diary.js            diary entries
     todos.js            todos
-    github.js           daily activity pull and diary draft
+    github.js           daily activity pull, diary draft, repositories
+    webhooks.js         signed GitHub App webhook receiver
   services/
     github.js           token exchange and refresh, GraphQL activity queries, markdown draft
     email.js            Resend / Postmark / console sender
@@ -65,6 +66,9 @@ frontend/src/
     Markdown.jsx        small, safe markdown renderer for previews
     TodosPanel.jsx      add, edit, complete and delete todos; due and overdue badges
     SettingsDialog.jsx  reminder email, on/off switch, time zone
+    ReposPage.jsx       all repositories (search, filter) and per-repo commits/PRs/issues
+frontend/public/        privacy.html, terms.html (required for a Marketplace listing)
+.github/workflows/      ci.yml (test, lint, build) and release.yml (tag → Docker image + GitHub Release)
 ```
 
 ## Data model
@@ -93,13 +97,17 @@ Every route except `/health` and the sign-in routes needs a signed-in session. E
 | PUT / DELETE | `/api/diary/:id` | Updates or deletes an entry |
 | GET / POST | `/api/todos` | Lists or creates todos |
 | PUT / DELETE | `/api/todos/:id` | Updates (partial) or deletes a todo |
-| GET | `/api/github/activity?date=&tzOffset=` | Commits, opened PRs and reviews for one local day, plus a markdown draft |
+| GET | `/api/github/activity?date=&tzOffset=` | Commits, opened PRs and issues, and reviews for one local day, plus a markdown draft |
+| GET | `/api/github/repos` | Every repository the app can see, across all installations, with the install link |
+| GET | `/api/github/repos/:owner/:name` | Recent commits, open PRs and open issues for one repository |
+| POST | `/webhooks/github` | GitHub App webhooks (HMAC-verified). Clears a user's stored tokens when they revoke the app. |
 
 ## How the pieces work
 
 - **Activity pull.** A GraphQL `contributionsCollection` query between local midnight and midnight returns the PRs you opened, the reviews you gave, and a per-repo commit count. A second query fetches your commit messages from each repo's default branch. The app only sees private repos where the GitHub App is installed.
 - **Token refresh.** GitHub App user tokens expire after 8 hours. The backend stores the refresh token and swaps it for a new access token before calling GitHub. If GitHub still rejects the token, the dashboard asks you to sign in again.
 - **Reminders.** Every minute (`REMINDER_CRON`), the scheduler finds open todos that are past due, not yet reminded, and belong to users with reminders on and an email set. It sends each user one email listing those todos, then sets `reminder_sent_at`. Moving a todo's due date clears `reminder_sent_at`, so the reminder fires again. If sending fails, the todo stays unmarked and the next run retries.
+- **Repositories.** GitHub App user tokens only see repositories the app is installed on. The backend lists your installations (`/user/installations`), goes through every page of each one's repositories, and removes duplicates. To load *all* of your repos, install the app with "All repositories" selected. The page shows a link for that.
 - **Email address.** Without the "Email addresses" permission, the app can only read your public GitHub email. You can set or change the reminder email in Settings.
 
 ## Features

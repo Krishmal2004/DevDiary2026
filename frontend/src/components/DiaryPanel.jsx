@@ -4,6 +4,8 @@ import { formatLongDate, monthRange, parseDateKey, todayKey } from "../dates";
 import Calendar from "./Calendar";
 import Markdown from "./Markdown";
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 export default function DiaryPanel() {
   const [selected, setSelected] = useState(todayKey());
   const [view, setView] = useState(() => {
@@ -154,10 +156,9 @@ export default function DiaryPanel() {
 
           {activity && (
             <p className="notice info">
-              Pulled {activity.totals.commits} commit{activity.totals.commits === 1 ? "" : "s"},{" "}
-              {activity.totals.pullRequests} PR{activity.totals.pullRequests === 1 ? "" : "s"} and{" "}
-              {activity.totals.reviews} review{activity.totals.reviews === 1 ? "" : "s"} from GitHub. Edit the draft,
-              then save.
+              Pulled {plural(activity.totals.commits, "commit")}, {plural(activity.totals.pullRequests, "PR")},{" "}
+              {plural(activity.totals.issues ?? 0, "issue")} and {plural(activity.totals.reviews, "review")} from
+              GitHub. Edit the draft, then save.
             </p>
           )}
 
