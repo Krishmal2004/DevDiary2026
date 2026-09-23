@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { api, loginUrl } from "./api";
-import DiaryPanel from "./components/DiaryPanel";
-import TodosPanel from "./components/TodosPanel";
+import Header from "./components/Header";
+import Icon from "./components/Icon";
 import SettingsDialog from "./components/SettingsDialog";
-import ReposPage from "./components/ReposPage";
+import Overview from "./pages/Overview";
+import ReposPage from "./pages/ReposPage";
+import RepoPage from "./pages/RepoPage";
 import "./App.css";
-
-const PAGES = [
-  ["#/", "Dashboard"],
-  ["#/repos", "Repositories"],
-];
 
 function useHashRoute() {
   const [hash, setHash] = useState(() => window.location.hash || "#/");
   useEffect(() => {
-    const onChange = () => setHash(window.location.hash || "#/");
+    const onChange = () => {
+      setHash(window.location.hash || "#/");
+      window.scrollTo(0, 0);
+    };
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
@@ -23,31 +23,47 @@ function useHashRoute() {
 
 function Footer() {
   return (
-    <footer className="footer">
-      <a href="/privacy.html">Privacy</a>
-      <a href="/terms.html">Terms</a>
-      <a href="https://github.com/Krishmal2004/DevDiary2026" target="_blank" rel="noreferrer">
-        Source
-      </a>
+    <footer className="app-footer">
+      <span className="footer-brand">
+        <Icon name="book" /> © {new Date().getFullYear()} DevDiary2026
+      </span>
+      <nav>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="https://github.com/Krishmal2004/DevDiary2026" target="_blank" rel="noreferrer">
+          Source
+        </a>
+        <a href="https://github.com/Krishmal2004/DevDiary2026/issues" target="_blank" rel="noreferrer">
+          Support
+        </a>
+      </nav>
     </footer>
   );
 }
 
 function Login() {
   return (
-    <main className="login">
-      <div className="login-card">
-        <h1>DevDiary2026</h1>
-        <p className="tagline">
-          Your personal work log alongside GitHub — a daily diary drafted from your commits and PRs, todos that
-          aren&apos;t tied to any repo, and email reminders when they&apos;re due.
+    <div className="login">
+      <main className="login-main">
+        <span className="login-logo">
+          <Icon name="book" size={32} />
+        </span>
+        <h1>Sign in to DevDiary2026</h1>
+        <div className="box login-box">
+          <p>
+            Your personal work log next to GitHub: a daily diary drafted from your commits and pull requests, todos that
+            aren&apos;t tied to any repo, and email reminders when they&apos;re due.
+          </p>
+          <a className="btn btn-primary btn-block btn-large" href={loginUrl}>
+            Sign in with GitHub
+          </a>
+        </div>
+        <p className="login-note muted">
+          Read-only access to the repositories you choose. <a href="/privacy.html">Privacy</a>
         </p>
-        <a className="button github" href={loginUrl}>
-          Sign in with GitHub
-        </a>
-      </div>
+      </main>
       <Footer />
-    </main>
+    </div>
   );
 }
 
@@ -84,15 +100,20 @@ function App() {
     await api.logout().catch(() => {});
     setUser(null);
     setState("signed-out");
+    window.location.hash = "";
   }
 
   if (state === "loading") {
-    return <main className="centered">Loading…</main>;
+    return (
+      <main className="centered muted" aria-busy="true">
+        <span className="spinner" /> Loading…
+      </main>
+    );
   }
   if (state === "error") {
     return (
       <main className="centered">
-        <p className="notice error">{error}</p>
+        <p className="flash flash-error">{error}</p>
       </main>
     );
   }
@@ -100,41 +121,21 @@ function App() {
     return <Login />;
   }
 
+  const repoMatch = route.match(/^#\/repos\/([\w.-]+)\/([\w.-]+)$/);
+  let page;
+  if (repoMatch) {
+    page = <RepoPage key={route} owner={repoMatch[1]} name={repoMatch[2]} />;
+  } else if (route.startsWith("#/repos")) {
+    page = <ReposPage />;
+  } else {
+    page = <Overview user={user} onEditSettings={() => setShowSettings(true)} />;
+  }
+
   return (
     <div className="app">
-      <header className="topbar">
-        <nav className="topbar-nav">
-          <span className="brand">DevDiary2026</span>
-          {PAGES.map(([href, label]) => (
-            <a key={href} href={href} className="nav-link" aria-current={route === href ? "page" : undefined}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        <div className="topbar-user">
-          {user.avatar_url && <img src={user.avatar_url} alt="" className="avatar" />}
-          <span className="username">{user.username}</span>
-          <button type="button" className="secondary small" onClick={() => setShowSettings(true)}>
-            Settings
-          </button>
-          <button type="button" className="secondary small" onClick={logout}>
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      {route === "#/repos" ? (
-        <main className="page">
-          <ReposPage />
-        </main>
-      ) : (
-        <main className="dashboard">
-          <DiaryPanel />
-          <TodosPanel remindersActive={!!user.email && user.reminders_enabled} />
-        </main>
-      )}
+      <Header user={user} route={route} onSettings={() => setShowSettings(true)} onLogout={logout} />
+      <main className="container">{page}</main>
       <Footer />
-
       {showSettings && <SettingsDialog user={user} onClose={() => setShowSettings(false)} onSaved={setUser} />}
     </div>
   );

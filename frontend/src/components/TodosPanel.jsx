@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { dueMoment, formatDue, toLocalInputValue } from "../dates";
-
-const FILTERS = [
-  ["open", "Open"],
-  ["done", "Done"],
-  ["all", "All"],
-];
+import Icon from "./Icon";
 
 // datetime-local value ("YYYY-MM-DDTHH:mm", local time) → UTC ISO, or null.
 function inputToIso(value) {
@@ -17,7 +12,6 @@ function TodoForm({ initial, submitLabel, onSubmit, onCancel }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [due, setDue] = useState(initial?.due_date ? toLocalInputValue(initial.due_date) : "");
   const [link, setLink] = useState(initial?.linked_url ?? "");
-  const [showLink, setShowLink] = useState(!!initial?.linked_url);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -32,7 +26,6 @@ function TodoForm({ initial, submitLabel, onSubmit, onCancel }) {
         setTitle("");
         setDue("");
         setLink("");
-        setShowLink(false);
       }
     } catch (err) {
       setError(err.message);
@@ -43,42 +36,45 @@ function TodoForm({ initial, submitLabel, onSubmit, onCancel }) {
 
   return (
     <form className="todo-form" onSubmit={submit}>
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="What do you need to do?"
-        aria-label="Todo title"
-        autoFocus={!!initial}
-      />
+      <label className="form-group">
+        <span className="form-label">Title</span>
+        <input
+          className="form-control"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="What do you need to do?"
+          autoFocus
+        />
+      </label>
       <div className="todo-form-row">
-        <label className="field-inline">
-          <span>Due</span>
-          <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
+        <label className="form-group">
+          <span className="form-label">
+            <Icon name="clock" /> Due
+          </span>
+          <input className="form-control" type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
         </label>
-        {showLink ? (
+        <label className="form-group grow">
+          <span className="form-label">
+            <Icon name="link" /> Linked issue or PR <span className="muted">(optional)</span>
+          </span>
           <input
+            className="form-control"
             type="url"
             value={link}
             onChange={(e) => setLink(e.target.value)}
             placeholder="https://github.com/owner/repo/issues/1"
-            aria-label="Linked issue or PR URL"
-            className="grow"
           />
-        ) : (
-          <button type="button" className="link-button" onClick={() => setShowLink(true)}>
-            + Link issue/PR
-          </button>
-        )}
+        </label>
       </div>
-      {error && <p className="notice error">{error}</p>}
-      <div className="todo-form-actions">
+      {error && <p className="flash flash-error">{error}</p>}
+      <div className="form-actions">
         {onCancel && (
-          <button type="button" className="secondary" onClick={onCancel}>
+          <button type="button" className="btn" onClick={onCancel}>
             Cancel
           </button>
         )}
-        <button type="submit" disabled={busy || !title.trim()}>
+        <button type="submit" className="btn btn-primary" disabled={busy || !title.trim()}>
           {submitLabel}
         </button>
       </div>
@@ -86,13 +82,13 @@ function TodoForm({ initial, submitLabel, onSubmit, onCancel }) {
   );
 }
 
-function TodoItem({ todo, onUpdate, onDelete }) {
+function TodoRow({ todo, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
   const overdue = !todo.done && todo.due_date && dueMoment(todo.due_date) < new Date();
 
   if (editing) {
     return (
-      <li className="todo-item editing">
+      <li className="box-row todo-row editing">
         <TodoForm
           initial={todo}
           submitLabel="Save"
@@ -107,45 +103,55 @@ function TodoItem({ todo, onUpdate, onDelete }) {
   }
 
   return (
-    <li className={`todo-item${todo.done ? " done" : ""}`}>
-      <input
-        type="checkbox"
-        checked={!!todo.done}
-        onChange={() => onUpdate(todo, { done: !todo.done })}
-        aria-label={`Mark "${todo.title}" as ${todo.done ? "not done" : "done"}`}
-      />
-      <div className="todo-body">
+    <li className={`box-row todo-row${todo.done ? " done" : ""}`}>
+      <button
+        type="button"
+        className={`todo-state ${todo.done ? "closed" : "open"}`}
+        onClick={() => onUpdate(todo, { done: !todo.done })}
+        aria-label={todo.done ? `Reopen "${todo.title}"` : `Close "${todo.title}"`}
+        title={todo.done ? "Reopen" : "Mark as done"}
+      >
+        <Icon name={todo.done ? "issueClosed" : "issueOpened"} />
+      </button>
+      <div className="todo-main">
         <span className="todo-title">{todo.title}</span>
         <div className="todo-meta">
+          {overdue && <span className="label label-danger">Overdue</span>}
           {todo.due_date && (
-            <span className={`badge${overdue ? " overdue" : ""}`}>
-              {overdue ? "Overdue · " : ""}
-              {formatDue(todo.due_date)}
+            <span className="todo-meta-item">
+              <Icon name="clock" size={12} /> Due {formatDue(todo.due_date)}
             </span>
           )}
-          {todo.reminder_sent_at && !todo.done && <span className="badge muted">Reminder sent</span>}
+          {todo.reminder_sent_at && !todo.done && (
+            <span className="todo-meta-item">
+              <Icon name="bell" size={12} /> Reminder sent
+            </span>
+          )}
           {todo.linked_url && (
-            <a href={todo.linked_url} target="_blank" rel="noreferrer" className="todo-link">
+            <a href={todo.linked_url} target="_blank" rel="noreferrer" className="todo-meta-item todo-link">
+              <Icon name="link" size={12} />
               {todo.linked_url.replace(/^https?:\/\/(www\.)?(github\.com\/)?/, "")}
             </a>
           )}
+          {!todo.due_date && !todo.linked_url && <span className="todo-meta-item">No due date</span>}
         </div>
       </div>
       <div className="todo-actions">
-        <button type="button" className="icon-button" onClick={() => setEditing(true)} aria-label="Edit todo">
-          ✎
+        <button type="button" className="btn btn-sm btn-invisible icon-btn" onClick={() => setEditing(true)} aria-label="Edit todo">
+          <Icon name="pencil" />
         </button>
-        <button type="button" className="icon-button" onClick={() => onDelete(todo)} aria-label="Delete todo">
-          ×
+        <button type="button" className="btn btn-sm btn-invisible icon-btn" onClick={() => onDelete(todo)} aria-label="Delete todo">
+          <Icon name="trash" />
         </button>
       </div>
     </li>
   );
 }
 
-export default function TodosPanel({ remindersActive }) {
+export default function TodosPanel({ remindersActive, onOpenCountChange }) {
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("open");
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -164,8 +170,17 @@ export default function TodosPanel({ remindersActive }) {
     load();
   }, []);
 
+  const openCount = todos.filter((t) => !t.done).length;
+  const closedCount = todos.length - openCount;
+
+  useEffect(() => {
+    if (loaded) onOpenCountChange?.(openCount);
+  }, [loaded, openCount, onOpenCountChange]);
+
   async function create(todo) {
     await api.createTodo(todo);
+    setAdding(false);
+    setFilter("open");
     await load();
   }
 
@@ -180,6 +195,7 @@ export default function TodosPanel({ remindersActive }) {
   }
 
   async function remove(todo) {
+    if (!window.confirm(`Delete "${todo.title}"?`)) return;
     try {
       await api.deleteTodo(todo.id);
       setTodos((prev) => prev.filter((t) => t.id !== todo.id));
@@ -188,37 +204,66 @@ export default function TodosPanel({ remindersActive }) {
     }
   }
 
-  const openCount = todos.filter((t) => !t.done).length;
-  const visible = todos.filter((t) => filter === "all" || (filter === "done" ? t.done : !t.done));
+  const visible = todos.filter((t) => (filter === "closed" ? t.done : !t.done));
 
   return (
-    <section className="panel todos-panel" aria-labelledby="todos-heading">
-      <div className="panel-header">
-        <h2 id="todos-heading">Todos</h2>
-        <div className="segmented" role="tablist">
-          {FILTERS.map(([key, label]) => (
-            <button key={key} type="button" role="tab" aria-selected={filter === key} onClick={() => setFilter(key)}>
-              {label}
-              {key === "open" && openCount > 0 ? ` (${openCount})` : ""}
-            </button>
-          ))}
-        </div>
+    <section aria-labelledby="todos-heading">
+      <div className="section-header">
+        <h2 id="todos-heading" className="section-title">
+          Todos
+        </h2>
+        <button type="button" className="btn btn-primary" onClick={() => setAdding((a) => !a)}>
+          <Icon name="plus" /> New todo
+        </button>
       </div>
 
-      <TodoForm submitLabel="Add todo" onSubmit={create} />
       {!remindersActive && (
-        <p className="notice info">Add your email in Settings to get reminders when todos are due.</p>
+        <p className="flash flash-warn">
+          <Icon name="bell" /> Add a reminder email in Settings to get emailed when todos are due.
+        </p>
       )}
-      {error && <p className="notice error">{error}</p>}
+      {error && <p className="flash flash-error">{error}</p>}
 
-      <ul className="todo-list">
-        {visible.map((todo) => (
-          <TodoItem key={todo.id} todo={todo} onUpdate={update} onDelete={remove} />
-        ))}
+      {adding && (
+        <div className="box new-todo">
+          <div className="box-body">
+            <TodoForm submitLabel="Create todo" onSubmit={create} onCancel={() => setAdding(false)} />
+          </div>
+        </div>
+      )}
+
+      <div className="box">
+        <div className="box-header list-header">
+          <button
+            type="button"
+            className="list-filter"
+            aria-pressed={filter === "open"}
+            onClick={() => setFilter("open")}
+          >
+            <Icon name="issueOpened" /> {openCount} Open
+          </button>
+          <button
+            type="button"
+            className="list-filter"
+            aria-pressed={filter === "closed"}
+            onClick={() => setFilter("closed")}
+          >
+            <Icon name="check" /> {closedCount} Done
+          </button>
+        </div>
+        <ul className="todo-list">
+          {visible.map((todo) => (
+            <TodoRow key={todo.id} todo={todo} onUpdate={update} onDelete={remove} />
+          ))}
+        </ul>
         {loaded && visible.length === 0 && (
-          <li className="empty">{filter === "done" ? "Nothing completed yet." : "You're all caught up."}</li>
+          <div className="blankslate">
+            <Icon name={filter === "closed" ? "issueClosed" : "issueOpened"} size={24} />
+            <h3>{filter === "closed" ? "Nothing done yet" : "You're all caught up"}</h3>
+            <p>{filter === "closed" ? "Completed todos show up here." : "Create a todo to plan work that isn't tied to any repo."}</p>
+          </div>
         )}
-      </ul>
+      </div>
     </section>
   );
 }

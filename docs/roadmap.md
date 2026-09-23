@@ -19,7 +19,7 @@
 
 - [ ] Weekly auto-summary email of commits/PRs across all repos
 - [ ] Personal goal tracking with progress pulled from linked PRs
-- [ ] Consistency/streak view of coding activity
+- [x] Consistency/streak view of coding activity (contribution graph, coding and writing streaks)
 - [ ] Cross-repo personal dashboard
 
 ## Status

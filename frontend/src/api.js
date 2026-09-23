@@ -48,6 +48,7 @@ export const api = {
   updateTodo: (id, changes) => request(`/api/todos/${id}`, { method: "PUT", body: changes }),
   deleteTodo: (id) => request(`/api/todos/${id}`, { method: "DELETE" }),
 
+  contributions: () => request("/api/github/contributions"),
   repos: () => request("/api/github/repos"),
   repo: (fullName) => request(`/api/github/repos/${fullName}`),
 

@@ -278,6 +278,48 @@ async function fetchRepository(user, owner, name) {
   };
 }
 
+const CONTRIBUTION_CALENDAR_QUERY = `
+  query {
+    viewer {
+      contributionsCollection {
+        contributionCalendar {
+          totalContributions
+          weeks {
+            contributionDays { date weekday contributionCount contributionLevel }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const CONTRIBUTION_LEVELS = {
+  NONE: 0,
+  FIRST_QUARTILE: 1,
+  SECOND_QUARTILE: 2,
+  THIRD_QUARTILE: 3,
+  FOURTH_QUARTILE: 4,
+};
+
+// The user's GitHub contribution graph for the last year, as GitHub shows it
+// on their profile.
+async function fetchContributionCalendar(user) {
+  const token = await getAccessToken(user);
+  const data = await githubGraphQL(token, CONTRIBUTION_CALENDAR_QUERY);
+  const calendar = data.viewer.contributionsCollection.contributionCalendar;
+  return {
+    totalContributions: calendar.totalContributions,
+    weeks: calendar.weeks.map((week) =>
+      week.contributionDays.map((day) => ({
+        date: day.date,
+        weekday: day.weekday,
+        count: day.contributionCount,
+        level: CONTRIBUTION_LEVELS[day.contributionLevel] ?? 0,
+      }))
+    ),
+  };
+}
+
 const ISSUE_CONTRIBUTIONS_QUERY = `
   query ($from: DateTime!, $to: DateTime!) {
     viewer {
@@ -487,5 +529,6 @@ module.exports = {
   buildCommitHistoryQuery,
   listRepositories,
   fetchRepository,
+  fetchContributionCalendar,
   installUrl,
 };

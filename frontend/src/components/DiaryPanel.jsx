@@ -2,16 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 import { api, loginUrl } from "../api";
 import { formatLongDate, monthRange, parseDateKey, todayKey } from "../dates";
 import Calendar from "./Calendar";
+import Icon from "./Icon";
 import Markdown from "./Markdown";
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-export default function DiaryPanel() {
-  const [selected, setSelected] = useState(todayKey());
-  const [view, setView] = useState(() => {
-    const d = parseDateKey(todayKey());
-    return { year: d.getFullYear(), month: d.getMonth() };
-  });
+function monthOf(key) {
+  const d = parseDateKey(key);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+// The selected day is owned by the parent so the contribution graph can pick
+// it too. `dirtyRef` tells the parent when leaving would lose unsaved text.
+export default function DiaryPanel({ selected, onSelect, dirtyRef, onEntryChange }) {
+  const [view, setView] = useState(() => monthOf(selected));
   const [entries, setEntries] = useState({});
   const [content, setContent] = useState("");
   const [mode, setMode] = useState("write");
@@ -23,6 +27,10 @@ export default function DiaryPanel() {
 
   const entry = entries[selected];
   const dirty = content !== (entry?.content ?? "");
+
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty, dirtyRef]);
 
   const loadMonth = useCallback(async ({ year, month }) => {
     const { from, to } = monthRange(year, month);
@@ -38,6 +46,18 @@ export default function DiaryPanel() {
     loadMonth(view);
   }, [view, loadMonth]);
 
+  // When the selected day changes (from here or the contribution graph),
+  // clear per-day messages and show its month.
+  const [shownDate, setShownDate] = useState(selected);
+  if (shownDate !== selected) {
+    setShownDate(selected);
+    setActivity(null);
+    setStatus(null);
+    setError(null);
+    const target = monthOf(selected);
+    if (target.year !== view.year || target.month !== view.month) setView(target);
+  }
+
   // Load the editor when the selected day changes, or when that day's entry
   // first arrives from the server.
   const editorKey = `${selected}:${entry?.id ?? "new"}`;
@@ -46,19 +66,6 @@ export default function DiaryPanel() {
     setLoadedKey(editorKey);
     setContent(entry?.content ?? "");
     setMode(entry ? "preview" : "write");
-  }
-
-  function selectDate(key) {
-    if (key === selected) return;
-    if (dirty && !window.confirm("Discard unsaved changes to this entry?")) return;
-    setActivity(null);
-    setStatus(null);
-    setError(null);
-    setSelected(key);
-    const d = parseDateKey(key);
-    if (d.getFullYear() !== view.year || d.getMonth() !== view.month) {
-      setView({ year: d.getFullYear(), month: d.getMonth() });
-    }
   }
 
   function changeMonth(delta) {
@@ -90,6 +97,7 @@ export default function DiaryPanel() {
     try {
       const saved = await api.saveDiary(selected, content);
       setEntries((prev) => ({ ...prev, [selected]: saved }));
+      onEntryChange(selected, true);
       setStatus("Saved");
     } catch (err) {
       setError(err.message);
@@ -107,6 +115,7 @@ export default function DiaryPanel() {
         delete next[selected];
         return next;
       });
+      onEntryChange(selected, false);
     } catch (err) {
       setError(err.message);
     }
@@ -115,89 +124,115 @@ export default function DiaryPanel() {
   const isFuture = selected > todayKey();
 
   return (
-    <section className="panel diary-panel" aria-labelledby="diary-heading">
-      <h2 id="diary-heading">Diary</h2>
+    <section className="box" aria-labelledby="diary-heading">
+      <div className="box-header">
+        <h2 id="diary-heading" className="box-title">
+          <Icon name="book" /> Diary
+        </h2>
+        <span className="header-spacer" />
+        {entry ? (
+          <span className="label label-success">
+            <Icon name="check" size={12} /> Written
+          </span>
+        ) : (
+          <span className="label">{isFuture ? "Planning" : "No entry yet"}</span>
+        )}
+      </div>
+
       <div className="diary-layout">
         <Calendar
           year={view.year}
           month={view.month}
           selected={selected}
           entryDates={new Set(Object.keys(entries))}
-          onSelect={selectDate}
+          onSelect={onSelect}
           onMonthChange={changeMonth}
         />
 
         <div className="diary-editor">
-          <div className="diary-editor-header">
-            <h3>{formatLongDate(selected)}</h3>
-            <div className="segmented" role="tablist">
-              <button type="button" role="tab" aria-selected={mode === "write"} onClick={() => setMode("write")}>
+          <h3 className="diary-date">{formatLongDate(selected)}</h3>
+
+          {error === "reauth" ? (
+            <p className="flash flash-error">
+              Your GitHub session expired. <a href={loginUrl}>Sign in again</a> to pull activity.
+            </p>
+          ) : (
+            error && <p className="flash flash-error">{error}</p>
+          )}
+
+          {activity && (
+            <p className="flash flash-info">
+              Pulled {plural(activity.totals.commits, "commit")}, {plural(activity.totals.pullRequests, "pull request")},{" "}
+              {plural(activity.totals.issues ?? 0, "issue")} and {plural(activity.totals.reviews, "review")} from
+              GitHub. Edit the draft, then save.
+            </p>
+          )}
+
+          <div className="comment-box">
+            <div className="comment-tabs" role="tablist">
+              <button type="button" role="tab" className="comment-tab" aria-selected={mode === "write"} onClick={() => setMode("write")}>
                 Write
               </button>
               <button
                 type="button"
                 role="tab"
+                className="comment-tab"
                 aria-selected={mode === "preview"}
                 onClick={() => setMode("preview")}
                 disabled={!content.trim()}
               >
                 Preview
               </button>
-            </div>
-          </div>
-
-          {error === "reauth" ? (
-            <p className="notice error">
-              Your GitHub session expired. <a href={loginUrl}>Sign in again</a> to pull activity.
-            </p>
-          ) : (
-            error && <p className="notice error">{error}</p>
-          )}
-
-          {activity && (
-            <p className="notice info">
-              Pulled {plural(activity.totals.commits, "commit")}, {plural(activity.totals.pullRequests, "PR")},{" "}
-              {plural(activity.totals.issues ?? 0, "issue")} and {plural(activity.totals.reviews, "review")} from
-              GitHub. Edit the draft, then save.
-            </p>
-          )}
-
-          {mode === "write" ? (
-            <textarea
-              className="diary-textarea"
-              value={content}
-              onChange={(e) => {
-                setContent(e.target.value);
-                setStatus(null);
-              }}
-              placeholder={
-                isFuture
-                  ? "Plan ahead: what do you want to get done this day?"
-                  : "What did you work on? Tip: pull your commits and PRs from GitHub to get a head start."
-              }
-              aria-label={`Diary entry for ${selected}`}
-            />
-          ) : (
-            <div className="diary-preview">
-              <Markdown source={content} />
-            </div>
-          )}
-
-          <div className="diary-actions">
-            <button type="button" className="secondary" onClick={draftFromGitHub} disabled={drafting || isFuture}>
-              {drafting ? "Pulling activity…" : "Draft from GitHub activity"}
-            </button>
-            <span className="spacer" />
-            {status && !dirty && <span className="status">{status}</span>}
-            {dirty && <span className="status">Unsaved changes</span>}
-            {entry && (
-              <button type="button" className="danger-text" onClick={remove}>
-                Delete
+              <span className="header-spacer" />
+              <button
+                type="button"
+                className="btn btn-sm btn-invisible"
+                onClick={draftFromGitHub}
+                disabled={drafting || isFuture}
+                title={isFuture ? "No activity yet for future days" : "Add this day's commits, PRs and issues"}
+              >
+                <Icon name="download" />
+                {drafting ? "Pulling…" : "Draft from GitHub"}
               </button>
-            )}
-            <button type="button" onClick={save} disabled={saving || !dirty || !content.trim()}>
-              {saving ? "Saving…" : "Save entry"}
-            </button>
+            </div>
+
+            <div className="comment-body">
+              {mode === "write" ? (
+                <textarea
+                  className="form-control diary-textarea"
+                  value={content}
+                  onChange={(e) => {
+                    setContent(e.target.value);
+                    setStatus(null);
+                  }}
+                  placeholder={
+                    isFuture
+                      ? "Plan ahead: what do you want to get done this day?"
+                      : "What did you work on? Use “Draft from GitHub” to start from your commits and PRs."
+                  }
+                  aria-label={`Diary entry for ${selected}`}
+                />
+              ) : (
+                <div className="diary-preview">
+                  <Markdown source={content} />
+                </div>
+              )}
+            </div>
+
+            <div className="comment-footer">
+              <span className="muted small">
+                {dirty ? "Unsaved changes" : status === "Saved" ? "✓ Saved" : "Markdown is supported"}
+              </span>
+              <span className="header-spacer" />
+              {entry && (
+                <button type="button" className="btn btn-danger" onClick={remove}>
+                  <Icon name="trash" /> Delete
+                </button>
+              )}
+              <button type="button" className="btn btn-primary" onClick={save} disabled={saving || !dirty || !content.trim()}>
+                {saving ? "Saving…" : entry ? "Update entry" : "Save entry"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
