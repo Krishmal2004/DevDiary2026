@@ -1,72 +1,484 @@
+.centered {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+/* Login */
+
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.login-card {
+  max-width: 440px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow);
+}
+
+.login-card h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.tagline {
+  color: var(--muted);
+  margin: 0 0 1.75rem;
+}
+
+.button.github {
+  background: #1f2328;
+  color: #fff;
+  padding: 0.65rem 1.3rem;
+}
+
+/* App shell */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--text-h);
+  font-size: 1.1rem;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.username {
+  color: var(--text-h);
+  font-weight: 500;
+}
+
 .dashboard {
-  max-width: 640px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem 1rem;
-  font-family: system-ui, sans-serif;
-  text-align: left;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
 }
 
-.dashboard h1 {
-  margin-bottom: 1.5rem;
+@media (max-width: 1000px) {
+  .dashboard {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1rem;
+  }
 }
 
-.dashboard section {
-  margin-bottom: 2rem;
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
 }
 
-.error {
-  color: #c0392b;
-  background: #fdecea;
-  padding: 0.75rem 1rem;
+.panel > h2,
+.panel-header {
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  font-size: 1.15rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.segmented button {
+  background: none;
+  color: var(--muted);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.9em;
   border-radius: 6px;
 }
 
+.segmented button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--text-h);
+  box-shadow: var(--shadow);
+}
+
+.notice {
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  margin: 0 0 0.75rem;
+  font-size: 0.92em;
+}
+
+.notice.error {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.notice.info {
+  background: var(--info-soft);
+  color: var(--text-h);
+}
+
+.status {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Diary */
+
+.diary-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 700px) {
+  .diary-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-title {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 0.2rem 0;
+}
+
+.calendar-day {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  justify-content: center;
+  background: none;
+  color: var(--text-h);
+  font-weight: 400;
+  font-size: 0.88rem;
+  border-radius: 6px;
+}
+
+.calendar-day:hover {
+  background: var(--surface-2);
+}
+
+.calendar-day.future {
+  color: var(--muted);
+}
+
+.calendar-day.today {
+  border-color: var(--accent);
+}
+
+.calendar-day.selected {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.calendar-dot {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.calendar-day.selected .calendar-dot {
+  background: var(--accent-contrast);
+}
+
+.calendar .link-button {
+  margin-top: 0.5rem;
+  font-size: 0.9em;
+}
+
+.diary-editor {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.diary-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.diary-editor-header h3 {
+  font-size: 1rem;
+}
+
+.diary-textarea,
+.diary-preview {
+  min-height: 320px;
+  width: 100%;
+}
+
+.diary-textarea {
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.diary-preview {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 0.9rem 0 0.4rem;
+}
+
+.markdown h3:first-child {
+  margin-top: 0;
+}
+
+.markdown p,
+.markdown ul {
+  margin: 0 0 0.6rem;
+}
+
+.markdown ul {
+  padding-left: 1.2rem;
+}
+
+.diary-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Todos */
+
 .todo-form {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.todo-form input {
-  flex: 1;
-  padding: 0.5rem;
+.todo-form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.todo-list,
-.diary-list {
-  list-style: none;
-  padding: 0;
+.field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.grow {
+  flex: 1;
+}
+
+.todo-form-actions {
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 
-.todo-list li,
-.diary-list li {
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-}
-
-.diary-list li {
   flex-direction: column;
+  gap: 0.4rem;
+}
+
+.todo-item {
+  display: flex;
   align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.6rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
-.todo-list .done {
+.todo-item.editing {
+  display: block;
+}
+
+.todo-item input[type="checkbox"] {
+  margin-top: 0.3rem;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.todo-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-title {
+  color: var(--text-h);
+  overflow-wrap: anywhere;
+}
+
+.todo-item.done .todo-title {
   text-decoration: line-through;
-  color: #888;
+  color: var(--muted);
 }
 
-.due {
-  font-size: 0.85rem;
-  color: #888;
+.todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.badge {
+  background: var(--surface-2);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+}
+
+.badge.overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.todo-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.todo-actions {
+  display: flex;
 }
 
 .empty {
-  color: #888;
+  color: var(--muted);
   font-style: italic;
+  padding: 0.5rem;
+}
+
+/* Settings dialog */
+
+.dialog {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  width: min(440px, calc(100vw - 2rem));
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.dialog h2 {
+  font-size: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.field > span {
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.field small {
+  color: var(--muted);
+}
+
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

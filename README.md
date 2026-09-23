@@ -38,29 +38,33 @@ See the [docs](./docs) folder for details:
 
 ## Setup / Getting Started
 
-\`\`\`bash
+Requires Node.js 20+.
+
+```bash
 # Clone the repo
 git clone <your-repo-url>
 cd devdiary2026
 
-# Install dependencies
-npm install
+# Install backend + frontend dependencies
+npm run setup
 
-# Copy env template and fill in your credentials
-cp .env.example .env
+# Copy env template and fill in your GitHub App credentials
+cp backend/.env.example backend/.env
 
-# Run database migrations (once DB is set up)
+# Create / upgrade the SQLite database
 npm run migrate
 
-# Start the dev server
+# Start the backend (:4000) and the dashboard (:5173)
 npm run dev
-\`\`\`
+```
 
-See [docs/setup.md](./docs/setup.md) for environment variable details.
+Open http://localhost:5173 and sign in with GitHub. Run the API tests with `npm test`.
+
+See [docs/setup.md](./docs/setup.md) for environment variables and deployment.
 
 ## Status
 
-🚧 GitHub App registered — backend/frontend not yet built. See [docs/roadmap.md](./docs/roadmap.md).
+✅ MVP complete: GitHub sign-in, a daily diary auto-drafted from your commits/PRs, personal todos, and email reminders. Next up: a live test on a real account and deployment. See [docs/roadmap.md](./docs/roadmap.md).
 
 ## License
 
