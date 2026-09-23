@@ -411,7 +411,7 @@ test("repositories are listed across every installation, paginated and de-duplic
 });
 
 test("repository details include commits, PRs and issues, tolerating missing issue access", async () => {
-  githubHandler = async (url, options) => {
+  githubHandler = async (_url, options) => {
     const { query, variables } = JSON.parse(options.body);
     assert.deepEqual(variables, { owner: "alice", name: "app" });
     if (query.includes("issues(")) {
@@ -454,6 +454,34 @@ test("repository details include commits, PRs and issues, tolerating missing iss
   assert.match(res.body.issuesError, /Issues/);
 
   assert.equal((await api("/api/github/repos/alice/..%2F..%2Fetc", { user: alice })).status, 400);
+});
+
+test("the contribution graph maps GitHub's quartiles to levels 0–4", async () => {
+  githubHandler = async () =>
+    Response.json({
+      data: {
+        viewer: {
+          contributionsCollection: {
+            contributionCalendar: {
+              totalContributions: 7,
+              weeks: [
+                {
+                  contributionDays: [
+                    { date: "2026-09-20", weekday: 0, contributionCount: 0, contributionLevel: "NONE" },
+                    { date: "2026-09-21", weekday: 1, contributionCount: 7, contributionLevel: "FOURTH_QUARTILE" },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+  const res = await api("/api/github/contributions", { user: alice });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.totalContributions, 7);
+  assert.deepEqual(res.body.weeks[0][1], { date: "2026-09-21", weekday: 1, count: 7, level: 4 });
 });
 
 test("installing the app from GitHub restarts sign-in instead of failing the state check", async () => {

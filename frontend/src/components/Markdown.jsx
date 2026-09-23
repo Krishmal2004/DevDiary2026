@@ -65,5 +65,5 @@ export default function Markdown({ source }) {
   });
   flush();
 
-  return <div className="markdown">{blocks}</div>;
+  return <div className="markdown-body">{blocks}</div>;
 }

@@ -5,6 +5,7 @@ const {
   activityToMarkdown,
   listRepositories,
   fetchRepository,
+  fetchContributionCalendar,
   GitHubAuthError,
 } = require("../services/github");
 const { isValidDateString } = require("../validation");
@@ -19,6 +20,15 @@ function handleGitHubError(res, err, what) {
   console.error(`Fetching ${what} from GitHub failed:`, err);
   res.status(502).json({ error: `Could not fetch ${what} from GitHub` });
 }
+
+// GET /api/github/contributions — last year's contribution graph.
+router.get("/contributions", async (req, res) => {
+  try {
+    res.json(await fetchContributionCalendar(req.user));
+  } catch (err) {
+    handleGitHubError(res, err, "contributions");
+  }
+});
 
 // GET /api/github/repos — every repository the app can see for this user.
 router.get("/repos", async (req, res) => {

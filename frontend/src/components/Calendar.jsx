@@ -1,6 +1,7 @@
 import { toDateKey, todayKey } from "../dates";
+import Icon from "./Icon";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
 // Month grid (weeks start on Monday). Days with a diary entry get a dot.
 export default function Calendar({ year, month, selected, entryDates, onSelect, onMonthChange }) {
@@ -18,15 +19,15 @@ export default function Calendar({ year, month, selected, entryDates, onSelect, 
   return (
     <div className="calendar">
       <div className="calendar-header">
-        <button type="button" className="icon-button" onClick={() => onMonthChange(-1)} aria-label="Previous month">
-          ‹
+        <button type="button" className="btn btn-sm btn-invisible icon-btn" onClick={() => onMonthChange(-1)} aria-label="Previous month">
+          <Icon name="chevronLeft" />
         </button>
         <span className="calendar-title">{title}</span>
-        <button type="button" className="icon-button" onClick={() => onMonthChange(1)} aria-label="Next month">
-          ›
+        <button type="button" className="btn btn-sm btn-invisible icon-btn" onClick={() => onMonthChange(1)} aria-label="Next month">
+          <Icon name="chevronRight" />
         </button>
       </div>
-      <div className="calendar-grid" role="grid">
+      <div className="calendar-grid">
         {WEEKDAYS.map((w) => (
           <span key={w} className="calendar-weekday">
             {w}
@@ -57,8 +58,8 @@ export default function Calendar({ year, month, selected, entryDates, onSelect, 
           )
         )}
       </div>
-      <button type="button" className="link-button" onClick={() => onSelect(today)}>
-        Jump to today
+      <button type="button" className="btn btn-sm btn-block calendar-today" onClick={() => onSelect(today)}>
+        <Icon name="calendar" /> Today
       </button>
     </div>
   );

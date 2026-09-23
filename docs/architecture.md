@@ -57,16 +57,25 @@ backend/src/
 backend/test/           API tests (node:test)
 
 frontend/src/
-  App.jsx               session bootstrap, sign-in screen, dashboard shell
+  App.jsx               session bootstrap, sign-in screen, hash routing, app shell
   api.js                fetch wrapper for the backend
-  dates.js              local-day and due-date helpers
+  dates.js, format.js   date, relative-time and language-colour helpers
+  index.css             design tokens (GitHub Primer palette, light and dark) and base components
+  App.css               page layouts
+  pages/
+    Overview.jsx        GitHub-profile-style page: sidebar, contribution graph, diary, todos
+    ReposPage.jsx       all repositories: search, type filter, sort
+    RepoPage.jsx        one repository: Commits / Pull requests / Issues tabs
   components/
-    DiaryPanel.jsx      calendar plus editor, "Draft from GitHub activity", preview
+    Header.jsx          app header with underline tabs and avatar menu
+    ContributionGraph.jsx  GitHub contribution heatmap; click a day to open its diary entry
+    ProfileSidebar.jsx  avatar, settings summary, coding and writing streaks
+    DiaryPanel.jsx      calendar plus a comment-box editor (Write / Preview, "Draft from GitHub")
     Calendar.jsx        month grid; days with an entry get a dot
     Markdown.jsx        small, safe markdown renderer for previews
-    TodosPanel.jsx      add, edit, complete and delete todos; due and overdue badges
+    TodosPanel.jsx      issue-list-style todos: Open / Done, create, edit, reopen
     SettingsDialog.jsx  reminder email, on/off switch, time zone
-    ReposPage.jsx       all repositories (search, filter) and per-repo commits/PRs/issues
+    Icon.jsx            16px line icons
 frontend/public/        privacy.html, terms.html (required for a Marketplace listing)
 .github/workflows/      ci.yml (test, lint, build) and release.yml (tag → Docker image + GitHub Release)
 ```
@@ -98,6 +107,7 @@ Every route except `/health` and the sign-in routes needs a signed-in session. E
 | GET / POST | `/api/todos` | Lists or creates todos |
 | PUT / DELETE | `/api/todos/:id` | Updates (partial) or deletes a todo |
 | GET | `/api/github/activity?date=&tzOffset=` | Commits, opened PRs and issues, and reviews for one local day, plus a markdown draft |
+| GET | `/api/github/contributions` | Your GitHub contribution graph for the last year (levels 0–4 per day) |
 | GET | `/api/github/repos` | Every repository the app can see, across all installations, with the install link |
 | GET | `/api/github/repos/:owner/:name` | Recent commits, open PRs and open issues for one repository |
 | POST | `/webhooks/github` | GitHub App webhooks (HMAC-verified). Clears a user's stored tokens when they revoke the app. |
