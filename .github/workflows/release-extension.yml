@@ -1,0 +1,63 @@
+name: Release VS Code extension
+
+# Push an extension tag matching vscode-extension/package.json's version
+# (e.g. `git tag ext-v0.1.0 && git push origin ext-v0.1.0`) to test, package
+# and publish the extension. Separate from the app's `v*` tags so the two
+# ship independently. Publishing to each marketplace is skipped until its
+# token secret (VSCE_PAT, OVSX_PAT) is set.
+on:
+  push:
+    tags: ["ext-v*"]
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: vscode-extension
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - run: npm ci
+
+      - name: Check the tag matches the extension version
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME#ext-v}" != "$VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION" >&2
+            exit 1
+          fi
+
+      - name: Package
+        run: npm run package
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" devdiary2026-*.vsix \
+            --title "VS Code extension ${GITHUB_REF_NAME#ext-}" \
+            --notes "Install the attached \`.vsix\` with **Extensions → … → Install from VSIX…**. See vscode-extension/CHANGELOG.md for what's new."
+
+      - name: Publish to the VS Code Marketplace
+        if: env.VSCE_PAT != ''
+        run: npx vsce publish --no-dependencies --skip-license --packagePath devdiary2026-*.vsix
+
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: npx --yes ovsx publish devdiary2026-*.vsix -p "$OVSX_PAT"

@@ -1,0 +1,8 @@
+.vscode/**
+.vscode-test/**
+.vscode-test.mjs
+test/**
+node_modules/**
+eslint.config.js
+*.vsix
+.gitignore

@@ -37,8 +37,12 @@ router.post("/github", express.raw({ type: "application/json", limit: "5mb" }), 
   switch (event) {
     case "github_app_authorization":
       // The user revoked the app's access: forget their tokens so nothing
-      // keeps calling GitHub on their behalf. They can sign in again later.
+      // keeps calling GitHub on their behalf, and disconnect their editors.
+      // They can sign in again later.
       if (payload.action === "revoked" && payload.sender?.id) {
+        db.prepare("DELETE FROM api_tokens WHERE user_id = (SELECT id FROM users WHERE github_id = ?)").run(
+          payload.sender.id
+        );
         db.prepare(
           `UPDATE users SET access_token = '', refresh_token = NULL, token_expires_at = NULL,
              refresh_token_expires_at = NULL, updated_at = datetime('now')

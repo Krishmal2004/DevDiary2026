@@ -42,3 +42,33 @@ jobs:
       - name: Frontend build
         run: npm run build
         working-directory: frontend
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install extension dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # Downloads VS Code and runs the tests inside it; needs a display.
+      - name: Integration tests
+        run: xvfb-run -a npm run test:integration
+
+      - name: Package
+        run: npm run package

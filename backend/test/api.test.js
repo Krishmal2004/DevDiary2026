@@ -30,13 +30,14 @@ function sessionCookie(userId) {
   return `${name}=${value}; ${name}.sig=${sig}`;
 }
 
-async function api(path, { user, method = "GET", body } = {}) {
+async function api(path, { user, token, method = "GET", body } = {}) {
   const response = await realFetch(`${baseUrl}${path}`, {
     method,
     redirect: "manual",
     headers: {
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(user ? { Cookie: sessionCookie(user.id) } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -525,4 +526,247 @@ test("webhooks verify signatures and clear tokens when access is revoked", async
   } finally {
     delete process.env.GITHUB_WEBHOOK_SECRET;
   }
+});
+
+// --- VS Code extension sign-in and API tokens ---
+
+const { pkceChallenge, createAuthCode } = require("../src/services/apiTokens");
+const EXTENSION_REDIRECT = "vscode://krishmal2004.devdiary2026/auth";
+const STATE = "state-abcdefghijklmnop";
+
+// A browser-like client that keeps the session cookie between requests.
+function browser(user) {
+  const jar = new Map();
+  if (user) {
+    for (const part of sessionCookie(user.id).split("; ")) {
+      const [name, ...value] = part.split("=");
+      jar.set(name, value.join("="));
+    }
+  }
+  return async (path, { method = "GET", form } = {}) => {
+    const response = await realFetch(`${baseUrl}${path}`, {
+      method,
+      redirect: "manual",
+      headers: {
+        Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join("; "),
+        ...(form ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+      },
+      body: form ? new URLSearchParams(form).toString() : undefined,
+    });
+    for (const cookie of response.headers.getSetCookie()) {
+      const [pair] = cookie.split(";");
+      const [name, ...value] = pair.split("=");
+      jar.set(name, value.join("="));
+    }
+    return { status: response.status, location: response.headers.get("location"), text: await response.text() };
+  };
+}
+
+function startQuery(overrides = {}) {
+  const verifier = require("node:crypto").randomBytes(32).toString("base64url");
+  const params = {
+    state: STATE,
+    code_challenge: pkceChallenge(verifier),
+    code_challenge_method: "S256",
+    redirect_uri: EXTENSION_REDIRECT,
+    client_name: "VS Code on test-host",
+    ...overrides,
+  };
+  for (const [key, value] of Object.entries(params)) if (value === undefined) delete params[key];
+  return { verifier, query: new URLSearchParams(params).toString() };
+}
+
+function nonceFrom(html) {
+  return /name="nonce" value="([^"]+)"/.exec(html)[1];
+}
+
+// Runs start → confirmation page → Allow and returns the one-time code.
+async function authorizeCode(user, { redirect = true } = {}) {
+  const b = browser(user);
+  const start = startQuery(redirect ? {} : { redirect_uri: undefined });
+  const started = await b(`/auth/vscode/start?${start.query}`);
+  assert.equal(started.status, 302);
+  assert.equal(started.location, "/auth/vscode/authorize");
+
+  const confirm = await b("/auth/vscode/authorize");
+  assert.equal(confirm.status, 200);
+  assert.match(confirm.text, new RegExp(user.username));
+  const nonce = nonceFrom(confirm.text);
+
+  const allowed = await b("/auth/vscode/authorize", { method: "POST", form: { nonce, decision: "allow" } });
+  assert.equal(allowed.status, 200);
+  const code = /<code class="token">([^<]+)<\/code>/.exec(allowed.text)[1];
+  if (redirect) {
+    const refresh = /http-equiv="refresh" content="0;url=([^"]+)"/.exec(allowed.text)[1].replace(/&amp;/g, "&");
+    const url = new URL(refresh);
+    assert.equal(`${url.protocol}//${url.host}${url.pathname}`, EXTENSION_REDIRECT);
+    assert.equal(url.searchParams.get("code"), code);
+    assert.equal(url.searchParams.get("state"), STATE);
+  } else {
+    assert.doesNotMatch(allowed.text, /http-equiv="refresh"/);
+  }
+
+  // Each request allows one decision: a second Allow fails.
+  const again = await b("/auth/vscode/authorize", { method: "POST", form: { nonce, decision: "allow" } });
+  assert.equal(again.status, 400);
+  return { code, verifier: start.verifier };
+}
+
+async function signInToken(user) {
+  const { code, verifier } = await authorizeCode(user);
+  const res = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: verifier } });
+  assert.equal(res.status, 200);
+  return res.body.token;
+}
+
+test("VS Code sign-in exchanges a one-time code and PKCE verifier for an API token", async () => {
+  const { code, verifier } = await authorizeCode(alice);
+
+  const res = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: verifier } });
+  assert.equal(res.status, 200);
+  assert.match(res.body.token, /^ddv_[\w-]{43}$/);
+  assert.equal(res.body.user.username, "alice");
+  assert.equal("access_token" in res.body.user, false);
+
+  // The code only works once.
+  const reused = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: verifier } });
+  assert.equal(reused.status, 400);
+
+  // The token authenticates API calls as its owner.
+  const token = res.body.token;
+  await api("/api/todos", { token, method: "POST", body: { title: "From VS Code" } });
+  assert.deepEqual((await api("/api/todos", { user: alice })).body.map((t) => t.title), ["From VS Code"]);
+  assert.equal((await api("/api/todos", { user: bob })).body.length, 0);
+  assert.equal((await api("/auth/me", { token })).body.username, "alice");
+
+  const listed = await api("/auth/tokens", { token });
+  const mine = listed.body.find((t) => t.current);
+  assert.equal(mine.name, "VS Code on test-host");
+  assert.equal("token_hash" in mine, false);
+  assert.ok(mine.last_used_at);
+
+  // A bad bearer token is rejected even alongside a valid session cookie.
+  const response = await realFetch(`${baseUrl}/api/todos`, {
+    headers: { Authorization: "Bearer ddv_nope", Cookie: sessionCookie(alice.id) },
+  });
+  assert.equal(response.status, 401);
+
+  // Sign out revokes the token.
+  assert.equal((await api("/auth/tokens/current", { token, method: "DELETE" })).status, 204);
+  assert.equal((await api("/api/todos", { token })).status, 401);
+});
+
+test("the token exchange rejects a wrong verifier, burning the code", async () => {
+  const { code, verifier } = await authorizeCode(alice);
+  const wrong = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: "x".repeat(43) } });
+  assert.equal(wrong.status, 400);
+  const right = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: verifier } });
+  assert.equal(right.status, 400);
+  assert.equal((await api("/auth/vscode/token", { method: "POST", body: {} })).status, 400);
+});
+
+test("expired sign-in codes are rejected", async () => {
+  const verifier = "e".repeat(50);
+  const code = createAuthCode({
+    userId: alice.id,
+    codeChallenge: pkceChallenge(verifier),
+    clientName: "VS Code",
+    now: Date.now() - 10 * 60 * 1000,
+  });
+  const res = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: verifier } });
+  assert.equal(res.status, 400);
+});
+
+test("without a redirect URI the confirmation page shows a code to paste", async () => {
+  const { code, verifier } = await authorizeCode(bob, { redirect: false });
+  const res = await api("/auth/vscode/token", { method: "POST", body: { code, code_verifier: verifier } });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.user.username, "bob");
+});
+
+test("VS Code sign-in validates the request and goes through GitHub when needed", async () => {
+  const anonymous = browser(null);
+  const bad = [
+    { redirect_uri: "https://evil.example/auth" },
+    { redirect_uri: "vscode://someone.else/auth" },
+    { redirect_uri: "vscode://krishmal2004.devdiary2026/other" },
+    { code_challenge_method: "plain" },
+    { code_challenge: "short" },
+    { state: "x" },
+  ];
+  for (const params of bad) {
+    const res = await anonymous(`/auth/vscode/start?${startQuery(params).query}`);
+    assert.equal(res.status, 400, JSON.stringify(params));
+  }
+
+  // Not signed in: GitHub sign-in first.
+  assert.equal((await anonymous(`/auth/vscode/start?${startQuery().query}`)).location, "/auth/github");
+  // Signed in but asking to refresh GitHub access: GitHub sign-in too.
+  const signedIn = browser(alice);
+  assert.equal((await signedIn(`/auth/vscode/start?${startQuery({ reauth: "1" }).query}`)).location, "/auth/github");
+
+  // With no pending request, or a forged nonce, nothing is issued.
+  assert.equal((await browser(alice)("/auth/vscode/authorize")).status, 400);
+  await signedIn(`/auth/vscode/start?${startQuery().query}`);
+  const forged = await signedIn("/auth/vscode/authorize", { method: "POST", form: { nonce: "forged", decision: "allow" } });
+  assert.equal(forged.status, 400);
+
+  // Cancel sends the editor an access_denied error and no code.
+  await signedIn(`/auth/vscode/start?${startQuery().query}`);
+  const nonce = nonceFrom((await signedIn("/auth/vscode/authorize")).text);
+  const denied = await signedIn("/auth/vscode/authorize", { method: "POST", form: { nonce, decision: "deny" } });
+  assert.match(denied.text, /error=access_denied/);
+  assert.doesNotMatch(denied.text, /class="token"/);
+});
+
+test("the GitHub callback continues a pending VS Code sign-in", async () => {
+  githubHandler = async (url) => {
+    if (url === "https://github.com/login/oauth/access_token") {
+      return Response.json({ access_token: "gh-token", refresh_token: "gh-refresh", expires_in: 28800, refresh_token_expires_in: 15811200 });
+    }
+    return Response.json({ id: 1, login: "alice", avatar_url: null, email: null });
+  };
+  const b = browser(null);
+  await b(`/auth/vscode/start?${startQuery().query}`);
+  const oauthState = new URL((await b("/auth/github")).location).searchParams.get("state");
+  const callback = await b(`/auth/github/callback?code=gh-code&state=${oauthState}`);
+  assert.equal(callback.status, 302);
+  assert.equal(callback.location, "/auth/vscode/authorize");
+  assert.equal((await b("/auth/vscode/authorize")).status, 200);
+});
+
+test("tokens can be listed and revoked from the dashboard, only by their owner", async () => {
+  const token = await signInToken(alice);
+  const [latest] = (await api("/auth/tokens", { user: alice })).body;
+  assert.equal(latest.current, false);
+
+  assert.equal((await api(`/auth/tokens/${latest.id}`, { user: bob, method: "DELETE" })).status, 404);
+  assert.equal((await api("/auth/tokens/current", { user: alice, method: "DELETE" })).status, 400);
+  assert.equal((await api(`/auth/tokens/${latest.id}`, { user: alice, method: "DELETE" })).status, 204);
+  assert.equal((await api("/api/diary", { token })).status, 401);
+});
+
+test("revoking the GitHub App disconnects the user's editors", async () => {
+  const crypto = require("node:crypto");
+  const dave = createUser(4, "dave");
+  const token = await signInToken(dave);
+  assert.equal((await api("/api/todos", { token })).status, 200);
+
+  const body = JSON.stringify({ action: "revoked", sender: { id: 4, login: "dave" } });
+  process.env.GITHUB_WEBHOOK_SECRET = "whsec";
+  try {
+    const res = await realFetch(`${baseUrl}/webhooks/github`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-GitHub-Event": "github_app_authorization",
+        "X-Hub-Signature-256": `sha256=${crypto.createHmac("sha256", "whsec").update(body).digest("hex")}`,
+      },
+      body,
+    });
+    assert.equal(res.status, 204);
+  } finally {
+    delete process.env.GITHUB_WEBHOOK_SECRET;
+  }
+  assert.equal((await api("/api/todos", { token })).status, 401);
 });
