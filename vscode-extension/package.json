@@ -22,7 +22,9 @@
     "journal",
     "todo",
     "github",
-    "worklog"
+    "worklog",
+    "merge conflict",
+    "git"
   ],
   "main": "./src/extension.js",
   "activationEvents": [
@@ -190,6 +192,12 @@
         "command": "devdiary.openUrl",
         "title": "Open on GitHub",
         "category": "DevDiary"
+      },
+      {
+        "command": "devdiary.checkConflicts",
+        "title": "Check Merge Conflicts",
+        "category": "DevDiary",
+        "icon": "$(git-merge)"
       }
     ],
     "menus": {
@@ -348,6 +356,13 @@
           "group": "3_delete@1"
         }
       ],
+      "scm/title": [
+        {
+          "command": "devdiary.checkConflicts",
+          "when": "scmProvider == git",
+          "group": "navigation@9"
+        }
+      ],
       "editor/title": [
         {
           "command": "devdiary.draftFromGitHub",
@@ -406,6 +421,26 @@
           ],
           "default": "ask",
           "description": "What Draft Diary from GitHub does when the entry already has text."
+        },
+        "devdiary.conflicts.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Check for merge conflicts with the base branch whenever your staged changes change (for example after `git add .`) and mark the conflicting lines."
+        },
+        "devdiary.conflicts.baseBranch": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Branch your pull requests target, e.g. `origin/main` or `origin/develop`. Leave empty to use the remote's default branch."
+        },
+        "devdiary.conflicts.fetch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fetch the base branch (at most every 2 minutes) before checking, so conflicts with commits pushed by others are found."
+        },
+        "devdiary.conflicts.notify": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a notification when staged changes would conflict. Conflicting lines are always marked in the editor and the Problems panel."
         }
       }
     }
