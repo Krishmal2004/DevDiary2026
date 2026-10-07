@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Merge conflict warnings.** When you stage changes (for example `git add .`), DevDiary predicts the conflicts they would have with the base branch of your pull request and marks the conflicting lines in the editor and the Problems panel, with a status bar count and a notification. New command **DevDiary: Check Merge Conflicts** and `devdiary.conflicts.*` settings.
+
 ## 0.1.1
 
 - Uses the public DevDiary server (https://devdiary-czdtetawaufxere0.southeastasia-01.azurewebsites.net) by default, so the extension works right after installing. Set `devdiary.serverUrl` to use your own server.

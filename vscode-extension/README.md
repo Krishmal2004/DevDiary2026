@@ -9,6 +9,7 @@ Your [DevDiary2026](https://github.com/Krishmal2004/DevDiary2026) work log insid
 - **Diary** — today's entry and your recent ones. Entries open as normal Markdown documents, so you get highlighting, preview (`Ctrl+Shift+V`) and your Markdown extensions. Saving the document saves the entry.
 - **Draft from GitHub** — fill an entry with a Markdown summary of that day's activity, then add your own notes.
 - **Due reminders** — a status bar count of overdue and due-today todos, and a notification when a todo becomes due (with *Mark Done* and *Snooze 1 Hour*).
+- **Merge conflict warnings** — as soon as you stage changes (`git add .` in the terminal, or the Source Control view), DevDiary merges them in memory with your pull request's base branch (`origin/main` by default) and marks the lines that would conflict: a warning squiggle in the editor showing what the base branch has there, entries in the Problems panel, a conflict count in the status bar and a notification. Your working tree, index and branches are never touched. Needs git 2.38+, works without signing in.
 
 ## Getting started
 
@@ -31,6 +32,7 @@ If your browser can't open VS Code (for example in a browser-based editor), the 
 | DevDiary: Refresh | |
 | DevDiary: Sign In with GitHub / Sign Out / Paste Sign-In Code | |
 | DevDiary: Open Dashboard | |
+| DevDiary: Check Merge Conflicts (also in the Source Control title bar) | |
 
 Due dates can be *No due date*, *Today*, *Tomorrow*, *Next Monday*, *In a week*, or a custom `YYYY-MM-DD` (all day) or `YYYY-MM-DD HH:mm` (local time).
 
@@ -43,6 +45,10 @@ Due dates can be *No due date*, *Today*, *Tomorrow*, *Next Monday*, *In a week*,
 | `devdiary.notifications.dueTodos` | `true` | Notify when a todo becomes due |
 | `devdiary.statusBar.enabled` | `true` | Show the due-todo count in the status bar |
 | `devdiary.diary.draftMode` | `ask` | When drafting into an entry that has text: `ask`, `append` or `replace` |
+| `devdiary.conflicts.enabled` | `true` | Check staged changes for merge conflicts with the base branch |
+| `devdiary.conflicts.baseBranch` | *(empty)* | Branch your pull requests target, e.g. `origin/develop`. Empty uses the remote's default branch |
+| `devdiary.conflicts.fetch` | `true` | Fetch the base branch (at most every 2 minutes) so conflicts with others' pushed work are found |
+| `devdiary.conflicts.notify` | `true` | Show a notification when staged changes would conflict |
 
 ## Privacy and security
 

@@ -9,6 +9,7 @@ const { TodosView } = require("./views/todosView");
 const { DiaryView } = require("./views/diaryView");
 const { DueStatusBar } = require("./statusBar");
 const { DueNotifier } = require("./notifier");
+const { ConflictChecker } = require("./conflicts/conflictChecker");
 const diaryCommands = require("./commands/diary");
 const todoCommands = require("./commands/todos");
 
@@ -57,6 +58,10 @@ async function activate(context) {
     new DueNotifier(context, store, api, auth)
   );
 
+  // Merge conflict warnings for staged changes. Works signed out too.
+  const conflicts = new ConflictChecker();
+  push(conflicts);
+
   // Commands
   const run = (id, fn) => push(vscode.commands.registerCommand(id, fn));
   run("devdiary.signIn", (options) => auth.signIn(options && options.reauth ? { reauth: true } : {}));
@@ -69,6 +74,7 @@ async function activate(context) {
   run("devdiary.openUrl", (url) => {
     if (typeof url === "string" && /^https?:\/\//.test(url)) vscode.env.openExternal(vscode.Uri.parse(url));
   });
+  run("devdiary.checkConflicts", () => conflicts.checkNow());
   run("devdiary.openDashboard", () => vscode.env.openExternal(vscode.Uri.parse(serverUrl())));
   diaryCommands.register(context, { api, store });
   todoCommands.register(context, { api, store, todosView });
@@ -122,6 +128,7 @@ async function activate(context) {
       }
       if (e.affectsConfiguration("devdiary.refreshInterval")) startTimer();
       if (e.affectsConfiguration("devdiary.statusBar.enabled")) statusBar.update();
+      if (e.affectsConfiguration("devdiary.conflicts")) conflicts.onConfigChanged();
     })
   );
 
@@ -132,7 +139,7 @@ async function activate(context) {
   if (!signedIn) vscode.commands.executeCommand("setContext", "devdiary.signedIn", false);
 
   // Exposed for integration tests.
-  return { api, auth, store };
+  return { api, auth, store, conflicts };
 }
 
 function deactivate() {}
